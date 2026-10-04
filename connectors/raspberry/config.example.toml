@@ -1,0 +1,51 @@
+# GHOST Raspberry Pi connector configuration.
+# Copy to config.toml (next to ghost_pi.py, or pass --config path) and edit.
+
+# Shown to the owner when pairing ("Workshop Pi wants to join").
+label = "Workshop Pi"
+
+# Device name in the GHOST catalog. In --simulate mode " (simulator)" is appended.
+name = "Demo table cover"
+
+# Stable key for this device, unique on this connector. Don't change it after pairing.
+local_key = "pi-cover"
+
+# Physical zone, used by search and by agents reasoning about "what can see what".
+zone_id = "workshop-demo-table"
+
+# Price per lease in US cents (integer). 0 = free. Leases last at most max_duration_s.
+price_cents = 0
+max_duration_s = 600
+
+# Optional: what this cover blocks or reveals, e.g. a camera capability ref
+# "<device_id>/camera.snapshot". Find the device_id in GHOST after the first pairing.
+# affects_view_of = "dev_abc123/camera.snapshot"
+
+# What to do when a lease is revoked:
+#   "none"  - stop accepting that lease's commands; leave the cover where it is (default)
+#   "close" - also close the cover (a local motion the connector makes on its own)
+on_revoke = "none"
+
+[servo]
+# BCM GPIO number for the servo signal wire. GPIO18 = physical pin 12.
+pin = 18
+# Pulse widths in milliseconds for min_angle and max_angle. SG90/MG90S: ~0.5-2.5 ms.
+# Narrow these if your servo buzzes or strains at the ends of its travel.
+min_pulse_width_ms = 0.5
+max_pulse_width_ms = 2.5
+min_angle = 0
+max_angle = 180
+# Angles (degrees, within min_angle..max_angle) for the two cover positions.
+open_angle = 90
+close_angle = 0
+# Time to let the servo reach the angle before reporting success.
+settle_ms = 700
+# Stop sending pulses after each move (no jitter or heat; the servo holds only by friction).
+detach_after_move = true
+
+[camera]
+# camera.snapshot is published only if this is true AND picamera2 finds a camera
+# (or, in --simulate mode, Pillow is installed to draw a synthetic JPEG).
+enabled = true
+width = 1280
+height = 720

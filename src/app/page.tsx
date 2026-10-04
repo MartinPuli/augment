@@ -1,69 +1,123 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect } from "react";
+import type { Device, Lease } from "@/lib/ghost/contracts";
+import { subscribeEvents } from "@/lib/ghost/client/api";
+import { useGhost } from "@/lib/store";
+import { ghost } from "@/lib/agent/http";
+import { sendToPolty } from "@/lib/agent/runtime";
+import { listener } from "@/lib/voice/listener";
+import { speaker } from "@/lib/voice/speaker";
+import { Canvas } from "@/components/canvas/Canvas";
+import { PoltyStage } from "@/components/mascot/PoltyStage";
+import { TopBar } from "@/components/hud/TopBar";
+import { VoiceDock } from "@/components/hud/VoiceDock";
+import { Hero } from "@/components/hud/Hero";
+import { ConversationDrawer } from "@/components/hud/ConversationDrawer";
 
 export default function Home() {
+  useCoordinatorSync();
+
+  const poke = () => {
+    speaker?.unlock();
+    const s = useGhost.getState();
+    if (listener?.listening) {
+      if (!s.handsFree) listener.finish();
+      return;
+    }
+    if (s.running || s.activity === "speaking") return;
+    s.set({ mood: "surprised" });
+    setTimeout(() => useGhost.getState().set({ mood: "happy" }), 500);
+    listener?.start("ptt", (t) => void sendToPolty(t));
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="ghost-world relative min-h-dvh overflow-x-hidden">
+      <TopBar />
+      <Hero />
+      <Canvas />
+      <PoltyStage onPoke={poke} />
+      <VoiceDock />
+      <ConversationDrawer />
+    </main>
   );
+}
+
+/** Mirror coordinator state (devices, leases, balance) into the store and react to new bodies. */
+function useCoordinatorSync() {
+  useEffect(() => {
+    let alive = true;
+    const set = useGhost.getState().set;
+    void speaker?.detect();
+
+    // /me creates the session cookie; everything else waits for it.
+    ghost<{ principal_id: string; owner_token: string; balance_cents: number; display_name: string }>("/me")
+      .then(async (me) => {
+        if (!alive) return;
+        set({ me });
+        const [list, leases] = await Promise.all([
+          ghost<Device[]>("/devices").catch(() => []),
+          ghost<Lease[]>("/leases?role=visitor&active=1").catch(() => []),
+        ]);
+        if (!alive) return;
+        if (Array.isArray(list)) set({ devices: Object.fromEntries(list.map((d) => [d.device_id, d])) });
+        if (Array.isArray(leases)) set({ leases: Object.fromEntries(leases.map((l) => [l.lease_id, l])) });
+      })
+      .catch(() => set({ error: "Coordinator unreachable. Start it with `pnpm dev`." }));
+
+    // The desktop tab is itself a connector (this laptop's webcam/mic, Bluetooth and USB devices,
+    // and the viewer side of phone live streams).
+    import("@/lib/connector/local")
+      .then((m) => m.ensureLocalConnector?.())
+      .catch(() => {});
+
+    const unsub = subscribeEvents((e) => {
+      const st = useGhost.getState();
+      switch (e.type) {
+        case "device.published":
+        case "device.updated": {
+          const prev = st.devices[e.device.device_id];
+          st.set({ devices: { ...st.devices, [e.device.device_id]: e.device } });
+          const personal = !e.device.connector_id.startsWith("internal:");
+          const meId = st.me?.principal_id;
+          // A new body joined (e.g. a phone just paired): let Polty notice it.
+          if (personal && !prev && e.type === "device.published" && (!meId || e.device.owner_id === meId)) {
+            st.addTrace({ kind: "event", title: `New device: ${e.device.name}`, detail: e.device.capabilities.map((c) => c.capability_id).join(", ") });
+            if (!st.running && st.ui.length > 0) {
+              void sendToPolty(
+                `New device published on GHOST: "${e.device.name}" (${e.device.device_id}) with capabilities ${e.device.capabilities.map((c) => c.capability_id).join(", ")}. Greet it briefly.`,
+                { event: true },
+              );
+            }
+          }
+          break;
+        }
+        case "device.removed": {
+          const devices = { ...st.devices };
+          delete devices[e.device_id];
+          st.set({ devices });
+          break;
+        }
+        case "lease.updated": {
+          st.set({ leases: { ...st.leases, [e.lease.lease_id]: e.lease } });
+          if (e.lease.state === "revoked" && e.lease.visitor_id === st.me?.principal_id) {
+            st.addTrace({ kind: "event", title: "Owner stopped access", detail: e.lease.reason });
+            st.set({ mood: "surprised" });
+          }
+          break;
+        }
+        case "ledger.updated":
+          if (st.me && e.principal_id === st.me.principal_id) st.set({ me: { ...st.me, balance_cents: e.balance_cents } });
+          break;
+        case "log":
+          if (e.level === "error") st.addTrace({ kind: "error", title: e.message });
+          break;
+      }
+    });
+
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, []);
 }

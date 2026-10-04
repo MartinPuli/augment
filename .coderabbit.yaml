@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit review config for GHOST: an open network where personal agents discover, lease
+# and invoke physical devices. Reviews focus on (1) honesty about what hardware actually did,
+# (2) security of the device channel, proxies, LAN access and credentials, (3) money/lease
+# correctness, (4) English-only product copy.
+language: "en-US"
+tone_instructions: "Be direct and specific. Lead with correctness and security risks; cite the file and line. Skip praise and style nits that linters already catch."
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_instructions: "Summarize user-visible behavior changes, any change to what the system claims a device did, and any change to auth, leases, payments or network reachability."
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  sequence_diagrams: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+  path_filters:
+    - "!pnpm-lock.yaml"
+    - "!**/*.onnx"
+    - "!public/**/*.{png,jpg,jpeg,gif,webp,ico,svg,mp3,wav}"
+    - "!.next/**"
+    - "!.ghost/**"
+    - "!.mastra/**"
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        Honesty rules for hardware (apply everywhere):
+        - Never report that a device acted, a photo was taken, or a goal was achieved unless the invocation reached state "succeeded" and, where the capability's verification is "observation", a fresh observation exists. "unknown", "accepted", "running" and timeouts are NOT success.
+        - Observation.captured_at must be the physical capture time or null. Flag any code that substitutes retrieval time, server time or file mtime.
+        - Simulated, mocked or fake devices must be labelled as such in names, notes and UI. Public camera stills are the operator's latest published image, not triggered by us; keep that note.
+        - The development ledger is test money. Flag any copy or code that presents it as a real payment.
+        - All user-facing copy (UI strings, agent prompts, errors) must be English.
+    - path: "src/lib/ghost/server/channel.ts"
+      instructions: |
+        Device channel (WebSocket /v1/device-channel) security review:
+        - hello must authenticate via a valid reconnect credential, a one-use, unexpired pairing code confirmed by the owner, or an owner token. No other path may create a connector.
+        - Never trust connector-supplied device ids, owner ids or invocation ids: map local_key -> device_id server-side and check that a "result" belongs to an invocation sent to that connector.
+        - Enforce message size limits, JSON parse safety, per-connector rate limits and heartbeat timeouts. Upload tokens must be single-use, hashed at rest and short-lived.
+        - Credentials and tokens must never be logged or echoed in events.
+    - path: "src/lib/ghost/server/{routes/proxy.ts,adapters/**}"
+      instructions: |
+        SSRF review. Proxies and public-source adapters fetch remote URLs on behalf of users:
+        - Only allow-listed operator hosts or URLs derived from the catalog, never arbitrary user-supplied URLs.
+        - Block private, loopback, link-local and metadata addresses (169.254.169.254, fd00::/8, ...) including after DNS resolution and redirects. Cap response size, time and redirects; check content-type.
+        - LAN adapters intentionally reach private addresses: they must only contact devices discovered on the LAN and owned by the requesting principal, never a host taken from request input.
+    - path: "src/lib/ghost/server/{auth,leases,ledger,invocations,registry,pairings}.ts"
+      instructions: |
+        Authorization and money:
+        - Every route must resolve the principal and check ownership (visitor vs owner) before reading or mutating leases, invocations, observations, pairings or terms. Prefer 404 over 403 for other principals' objects.
+        - Money is integer cents. Check budgets (max_spend_cents), negotiation rounds (max 2 counteroffers) and floor prices; refunds/compensation on failure must be recorded.
+        - Lease exclusivity and quota must be enforced inside a transaction; look for check-then-act races.
+    - path: "src/{mastra/**,lib/ghost/server/missions/**}"
+      instructions: |
+        Mastra missions are deterministic physical procedures:
+        - No secrets (owner tokens, API keys) in workflow input, state, suspend payloads or request context: these are persisted in snapshots and traces.
+        - Loopback calls must use the operator-configured coordinator URL, never a URL from mission input (SSRF).
+        - Every device action needs an idempotency key derived from the run id so restarts do not double-actuate.
+        - Failures must be recorded honestly (outcome "failed"/"unverified"); leases must be released on every path, including errors before suspension.
+    - path: "src/lib/{llm,agent}/**"
+      instructions: |
+        LLM and agent code: secrets stay server-side (no NEXT_PUBLIC_ for keys). When the Neon AI Gateway is used, ANTHROPIC_API_KEY must not be sent to it. Tool results shown to the model must not include tokens. The agent must not claim physical outcomes beyond what tool results report.
+    - path: "src/{app,components}/**"
+      instructions: |
+        UI review: English-only copy, accessible controls (labels, focus states, contrast), no secrets in client code, and honest status labels (offline, unknown, unverified, simulated) rather than optimistic ones.
+    - path: "connectors/**"
+      instructions: |
+        Code that runs on real hardware (Raspberry Pi, Arduino): bound every actuator command (range, duration, rate), fail safe on disconnect (stop motors, close relays), never execute shell commands built from network input, and keep credentials in local config files with restrictive permissions.
+    - path: "{Dockerfile,fly.toml,.dockerignore}"
+      instructions: |
+        Deployment: no secrets in build args or layers (only NEXT_PUBLIC_* and the Interfere public key may be build args), .env files excluded from the build context, one machine because coordinator state is in memory, HTTPS forced, health check on a cheap path.
+  tools:
+    eslint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    osvScanner:
+      enabled: true
+    hadolint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    ruff:
+      enabled: true
+    actionlint:
+      enabled: true
+    ast-grep:
+      essential_rules: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "docs/**/*.md"
+  learnings:
+    scope: "auto"

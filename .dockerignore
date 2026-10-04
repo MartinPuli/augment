@@ -1,0 +1,30 @@
+# Never ship secrets or local state into the image
+.env
+.env.*
+!.env.example
+*.pem
+.ghost/
+.mastra/
+
+# Rebuilt inside the image
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# Repo / editor noise
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+npm-debug.log*
+pnpm-debug.log*
+Dockerfile
+.dockerignore
+fly.toml
+
+# Hardware connectors run on the devices themselves, not in the coordinator image
+connectors/

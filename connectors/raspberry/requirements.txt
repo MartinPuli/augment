@@ -1,0 +1,15 @@
+# GHOST Raspberry Pi connector (Python 3.11+)
+websockets>=13
+
+# GPIO servo control. Only needed on a real Pi (not imported in --simulate mode).
+# Raspberry Pi OS already ships it as python3-gpiozero; on other machines this line is harmless.
+gpiozero>=2.0; platform_machine == "aarch64" or platform_machine == "armv7l"
+# Its pin backend on Pi 5 / Bookworm is lgpio: `sudo apt install python3-lgpio` and use a
+# --system-site-packages venv (pip-building lgpio needs the C library and swig).
+
+# Optional: synthetic camera.snapshot in --simulate mode.
+# Pillow>=10
+
+# Camera: picamera2 is NOT installed with pip. On the Pi use:
+#   sudo apt install -y python3-picamera2
+# and create the venv with --system-site-packages so it is importable.

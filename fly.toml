@@ -1,0 +1,54 @@
+# Fly.io config for GHOST (one machine: coordinator state + device-channel WebSockets live in memory).
+# Before the first deploy: set `app` (and the origin below) to your app name. See docs/deploy.md.
+app = "ghost-agents"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+  [build.args]
+    # Inlined into the browser bundle: phones open https://<app>.fly.dev/join to pair.
+    NEXT_PUBLIC_PUBLIC_ORIGIN = "https://ghost-agents.fly.dev"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  HOST = "0.0.0.0"
+  NEXT_PUBLIC_PUBLIC_ORIGIN = "https://ghost-agents.fly.dev"
+  # Interfere drops "development"/"local"/"test" events; only used when INTERFERE_PUBLIC_KEY is set.
+  INTERFERE_ENVIRONMENT = "production"
+
+[http_service]
+  internal_port = 3000
+  # Phones need a trusted HTTPS origin for getUserMedia (camera) and Web Bluetooth.
+  force_https = true
+  # Device channels are long-lived WebSockets: never stop the machine when "idle".
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    # Count connections, not requests: each paired device holds one WebSocket open.
+    type = "connections"
+    soft_limit = 800
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "15s"
+    timeout = "5s"
+    method = "GET"
+    path = "/api/v1/health"
+
+# Embedded Postgres (PGlite, .ghost/pgdata) and Mastra mission storage (.ghost/mastra.db) when
+# DATABASE_URL is not set. With Neon (DATABASE_URL secret) the volume only holds caches.
+[[mounts]]
+  source = "ghost_data"
+  destination = "/app/.ghost"
+  initial_size = "1gb"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

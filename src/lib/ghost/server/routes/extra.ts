@@ -1,6 +1,8 @@
 import type { Hono } from "hono";
 import { mountProxyRoutes } from "./proxy";
 import { mountLanRoutes } from "./lan";
+import { mountPartnerRoutes } from "./partners";
+import { mountMissionRoutes } from "../missions/routes";
 
 /**
  * Extra coordinator routes contributed by workstreams. Mounted under /api/v1 by the core HTTP app.
@@ -9,4 +11,6 @@ import { mountLanRoutes } from "./lan";
 export function mountExtraRoutes(app: Hono) {
   mountProxyRoutes(app);
   mountLanRoutes(app);
+  mountPartnerRoutes(app);
+  mountMissionRoutes(app);
 }

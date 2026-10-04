@@ -120,3 +120,45 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Possession sweep: a mint arc that orbits the widget border */
+@property --sweep {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes ghost-sweep {
+  to {
+    --sweep: 360deg;
+  }
+}
+.ghost-ring {
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Living background: drifting dot grid + vignette */
+.ghost-world {
+  background-color: var(--color-ink);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgb(244 239 228 / 0.07) 1px, transparent 0),
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgb(169 155 255 / 0.07), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 100%, rgb(93 242 181 / 0.05), transparent 70%);
+  background-size:
+    28px 28px,
+    100% 100%,
+    100% 100%;
+  animation: ghost-drift 60s linear infinite;
+}
+@keyframes ghost-drift {
+  to {
+    background-position:
+      280px 280px,
+      0 0,
+      0 0;
+  }
+}
