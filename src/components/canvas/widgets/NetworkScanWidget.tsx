@@ -15,7 +15,7 @@ import {
   Blinds,
   Camera,
   Cast,
-  CircleHelp,
+  CircleQuestionMark,
   Cpu,
   DoorOpen,
   Droplets,
@@ -44,12 +44,14 @@ import {
   Wifi,
   Wind,
   Zap,
-  type LucideIcon,
-} from "lucide-react";
+} from "lucide";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Device } from "@/lib/ghost/contracts";
 import { apiOrigin, getMe } from "@/lib/connector/http";
+import { Icon, type IconNode } from "@/components/ui/Icon";
+import { duration, ease, spring } from "@/components/ui/motion";
 import type { WidgetComponentProps } from "../types";
+import { EmptyState, SkeletonRows } from "./services/EmptyState";
 
 type Props = { autoScan?: boolean; scanKey?: string | number };
 
@@ -71,7 +73,7 @@ interface ScanResponse {
 
 type Tier = "ready" | "pair" | "seen";
 
-const ICONS: Record<string, LucideIcon> = {
+const ICONS: Record<string, IconNode> = {
   lightbulb: Lightbulb,
   plug: Plug,
   power: Power,
@@ -103,7 +105,7 @@ const ICONS: Record<string, LucideIcon> = {
   radar: Radar,
   radio: Radio,
 };
-const CLASS_ICONS: Partial<Record<Device["device_class"], LucideIcon>> = {
+const CLASS_ICONS: Partial<Record<Device["device_class"], IconNode>> = {
   light: Lightbulb,
   plug: Plug,
   switch: ToggleRight,
@@ -127,8 +129,8 @@ function tierOf(d: Device): Tier {
   return "seen";
 }
 
-function iconOf(d: Device): LucideIcon {
-  return (d.icon && ICONS[d.icon]) || CLASS_ICONS[d.device_class] || CircleHelp;
+function iconOf(d: Device): IconNode {
+  return (d.icon && ICONS[d.icon]) || CLASS_ICONS[d.device_class] || CircleQuestionMark;
 }
 
 /** Stable 32-bit hash (FNV-1a) → angle / radius jitter. */
@@ -142,9 +144,9 @@ function hash(s: string): number {
 }
 
 const TIER = {
-  ready: { text: "text-mint", bg: "bg-mint", ring: "border-mint/50", label: "Ready", glow: "shadow-[0_0_12px_rgb(45_212_191/0.6)]" },
-  pair: { text: "text-amber", bg: "bg-amber", ring: "border-amber/50", label: "Needs pairing", glow: "shadow-[0_0_12px_rgb(245_158_11/0.45)]" },
-  seen: { text: "text-mute", bg: "bg-mute", ring: "border-line-strong", label: "Unsupported", glow: "" },
+  ready: { text: "text-mint", bg: "bg-mint", ring: "ring-mint/40", label: "Ready" },
+  pair: { text: "text-amber", bg: "bg-amber", ring: "ring-amber/40", label: "Needs pairing" },
+  seen: { text: "text-fg-3", bg: "bg-fg-3", ring: "ring-line-strong", label: "Unsupported" },
 } as const;
 
 /** Status mark: shape AND text, never color alone. */
@@ -153,10 +155,10 @@ function TierBadge({ tier, offline }: { tier: Tier; offline?: boolean }) {
   return (
     <span
       className={clsx(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em]",
-        tier === "ready" && "border-mint/30 bg-mint/10 text-mint",
-        tier === "pair" && "border-amber/30 bg-amber/10 text-amber",
-        tier === "seen" && "border-line-strong bg-ink-4/60 text-ivory-dim",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-label font-medium",
+        tier === "ready" && "bg-mint/10 text-mint",
+        tier === "pair" && "bg-amber/10 text-amber",
+        tier === "seen" && "bg-tint text-fg-2",
       )}
     >
       {tier === "ready" && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-mint" />}
@@ -279,196 +281,202 @@ export default function NetworkScanWidget({ props, report, emit, focused }: Widg
   const showAllLabels = blips.length <= 6;
   const empty = !scanning && !!result && devices.length === 0;
 
+  const idle = !result && !scanning && !error;
+  const showRadar = scanning || devices.length > 0;
+  const EMPTY_NOTE = "No devices answered on this network. Venue Wi-Fi often isolates clients — try a phone hotspot or your home network.";
+
+  if (idle) {
+    return (
+      <EmptyState
+        illustration="radar"
+        fallback={Radar}
+        title="What's on your network?"
+        subtitle="Scan this computer's local network for lights, plugs and hubs with documented local APIs."
+        action={
+          <button
+            type="button"
+            onClick={() => void scan()}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-fg px-4 text-body-sm font-medium text-fg-inverse transition-opacity duration-150 ease-standard hover:opacity-90"
+          >
+            <Icon icon={Radar} size={15} /> Scan network
+          </button>
+        }
+      />
+    );
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       {/* status row */}
-      <div className="flex items-center gap-2">
-        <span className="hud-label flex min-w-0 flex-1 items-center gap-2 truncate">
+      <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-2 text-body-sm text-fg-2">
+          <Icon
+            icon={scanning ? LoaderCircle : error && !result ? TriangleAlert : Wifi}
+            size={15}
+            spring="snappy"
+            className={clsx("mt-0.5 shrink-0", scanning ? "animate-spin text-mint" : error && !result ? "text-coral" : "text-fg-3")}
+          />
           {scanning ? (
-            <>
-              <LoaderCircle size={11} className="animate-spin text-mint" aria-hidden />
-              <span className="text-mint">Scanning</span>
-              <span className="tabular-nums">{(elapsed / 1000).toFixed(1)}s</span>
-              <span className="hidden truncate sm:inline">· {SOURCES.join(" · ")}</span>
-            </>
+            <span className="min-w-0">
+              <span className="text-mint">Scanning</span> <span className="tabular-nums text-fg-3">{(elapsed / 1000).toFixed(1)}s</span>
+              <span className="hidden text-fg-3 sm:inline"> · {SOURCES.join(" · ")}</span>
+            </span>
           ) : result ? (
-            <>
-              <Wifi size={11} aria-hidden />
-              <span>
-                {devices.length} found · <span className="text-mint">{counts.ready} ready</span>
-                {counts.pair ? (
-                  <>
-                    {" "}
-                    · <span className="text-amber">{counts.pair} need pairing</span>
-                  </>
-                ) : null}
-                {counts.seen ? <> · {counts.seen} unsupported</> : null}
-              </span>
-              <span className="tabular-nums">· {(result.duration_ms / 1000).toFixed(1)}s</span>
-              {result.cached && <span>· cached</span>}
-            </>
+            <span className="min-w-0">
+              <span className="text-fg">{devices.length} found</span> · <span className="text-mint">{counts.ready} ready</span>
+              {counts.pair ? (
+                <>
+                  {" "}
+                  · <span className="text-amber">{counts.pair} need pairing</span>
+                </>
+              ) : null}
+              {counts.seen ? <> · {counts.seen} unsupported</> : null}
+              <span className="tabular-nums text-fg-3"> · {(result.duration_ms / 1000).toFixed(1)}s</span>
+              {result.cached && <span className="text-fg-3"> · cached</span>}
+            </span>
           ) : (
-            <span>Local network radar · idle</span>
+            <span className="min-w-0 text-fg-3">No results yet</span>
           )}
-        </span>
+        </div>
         <button
           type="button"
           onClick={() => void scan()}
           disabled={scanning}
-          className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-ink-3 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ivory-dim transition hover:border-mint/40 hover:text-mint disabled:opacity-50"
+          className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-tint px-3.5 text-caption font-medium text-fg-2 transition-colors duration-150 ease-standard enabled:hover:bg-line-strong enabled:hover:text-fg disabled:cursor-wait disabled:opacity-60"
         >
-          <RefreshCw size={11} className={clsx(scanning && "animate-spin")} aria-hidden />
-          {result || error ? "Rescan" : "Scan"}
+          <Icon icon={RefreshCw} size={14} className={clsx(scanning && "animate-spin")} />
+          {error && !scanning ? "Try again" : result || error ? "Rescan" : "Scan"}
         </button>
       </div>
 
       {/* radar */}
-      <div className="relative mx-auto aspect-square w-full max-w-[290px] shrink-0 select-none">
-        <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full" aria-hidden>
-          <defs>
-            <radialGradient id="ghost-radar-bg" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgb(45 212 191 / 0.16)" />
-              <stop offset="70%" stopColor="rgb(45 212 191 / 0.05)" />
-              <stop offset="100%" stopColor="rgb(255 255 255 / 0)" />
-            </radialGradient>
-          </defs>
-          <circle cx="100" cy="100" r="97" fill="url(#ghost-radar-bg)" stroke="rgb(15 23 42 / 0.14)" strokeWidth="0.8" />
-          {[24, 48, 72].map((r) => (
-            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="rgb(15 23 42 / 0.09)" strokeWidth="0.6" strokeDasharray={r === 72 ? "1.5 3" : undefined} />
-          ))}
-          <line x1="3" y1="100" x2="197" y2="100" stroke="rgb(15 23 42 / 0.07)" strokeWidth="0.6" />
-          <line x1="100" y1="3" x2="100" y2="197" stroke="rgb(15 23 42 / 0.07)" strokeWidth="0.6" />
-          {Array.from({ length: 72 }, (_, i) => {
-            const a = (i * 5 * Math.PI) / 180;
-            const long = i % 6 === 0;
-            const r1 = long ? 90 : 93.5;
-            return (
-              <line
-                key={i}
-                x1={100 + Math.cos(a) * r1}
-                y1={100 + Math.sin(a) * r1}
-                x2={100 + Math.cos(a) * 97}
-                y2={100 + Math.sin(a) * 97}
-                stroke={long ? "rgb(15 23 42 / 0.25)" : "rgb(15 23 42 / 0.1)"}
-                strokeWidth="0.6"
-              />
-            );
-          })}
-        </svg>
+      {showRadar && (
+        <div className="relative mx-auto aspect-square w-full max-w-[260px] shrink-0 select-none">
+          <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full text-mint-glow" aria-hidden>
+            <circle cx="100" cy="100" r="97" fill="currentColor" fillOpacity="0.07" className="stroke-line-strong" strokeWidth="0.8" />
+            {[34, 66].map((r) => (
+              <circle key={r} cx="100" cy="100" r={r} fill="none" className="stroke-line" strokeWidth="0.8" />
+            ))}
+          </svg>
 
-        {/* rotating sweep: fading conic wedge + leading edge */}
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute inset-[1.5%] rounded-full"
-          style={{
-            background: "conic-gradient(from 0deg, rgb(45 212 191 / 0) 0deg, rgb(45 212 191 / 0) 290deg, rgb(45 212 191 / 0.1) 320deg, rgb(20 184 166 / 0.38) 359deg, rgb(45 212 191 / 0) 360deg)",
-            opacity: scanning ? 1 : 0.55,
-          }}
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, ease: "linear", duration: scanning ? 2.4 : 7 }}
-        >
-          <span className="absolute left-1/2 top-0 h-1/2 w-px -translate-x-1/2 bg-gradient-to-t from-mint/0 via-mint/50 to-mint" />
-        </motion.div>
+          {/* rotating sweep: fading conic wedge + leading edge */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-[1.5%] rounded-full transition-opacity duration-300 ease-standard"
+            style={{
+              background:
+                "conic-gradient(from 0deg, transparent 0deg 290deg, color-mix(in oklab, var(--color-mint-glow) 10%, transparent) 320deg, color-mix(in oklab, var(--color-mint) 26%, transparent) 359deg, transparent 360deg)",
+              opacity: scanning ? 1 : 0.5,
+            }}
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, ease: "linear", duration: scanning ? 2.4 : 7 }}
+          >
+            <span className="absolute left-1/2 top-0 h-1/2 w-px -translate-x-1/2 bg-linear-to-t from-mint/0 via-mint/30 to-mint/70" />
+          </motion.div>
 
-        {/* this computer */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <span className="absolute inset-0 -m-1 animate-pulse-ring rounded-full border border-mint/40" aria-hidden />
-          <span className="grid h-7 w-7 place-items-center rounded-full border border-line-strong bg-ink-2 text-ivory-dim" title="This computer (GHOST coordinator)">
-            <Laptop size={13} aria-hidden />
-          </span>
-        </div>
+          {/* this computer */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <span className="absolute inset-0 -m-1 animate-pulse-ring rounded-full border border-mint/40" aria-hidden />
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-surface text-fg-2 shadow-pop" title="This computer (GHOST coordinator)">
+              <Icon icon={Laptop} size={14} />
+            </span>
+          </div>
 
-        {/* blips */}
-        <AnimatePresence>
-          {blips.map(({ d, tier, angle, x, y }) => {
-            const Icon = iconOf(d);
-            const t = TIER[tier];
-            const active = selected === d.device_id || hovered === d.device_id;
-            return (
-              <motion.button
-                key={d.device_id}
-                type="button"
-                onClick={() => select(d)}
-                onMouseEnter={() => setHovered(d.device_id)}
-                onMouseLeave={() => setHovered((h) => (h === d.device_id ? null : h))}
-                aria-label={`${d.name} — ${t.label}`}
-                className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 outline-none"
-                style={{ left: `${x}%`, top: `${y}%` }}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 420, damping: 18, delay: (angle / 360) * 0.9 }}
-              >
-                {tier === "ready" && <span aria-hidden className="absolute inset-0 animate-pulse-ring rounded-full border border-mint/60" />}
-                <span
-                  className={clsx(
-                    "relative grid h-6 w-6 place-items-center rounded-full border bg-ink-2/90 transition",
-                    t.text,
-                    t.ring,
-                    t.glow,
-                    active && "scale-125 bg-ink-3",
-                    !d.online && "opacity-50",
-                    "group-focus-visible:ring-2 group-focus-visible:ring-mint/60",
-                  )}
+          {/* blips */}
+          <AnimatePresence>
+            {blips.map(({ d, tier, angle, x, y }) => {
+              const glyph = iconOf(d);
+              const t = TIER[tier];
+              const active = selected === d.device_id || hovered === d.device_id;
+              return (
+                <motion.button
+                  key={d.device_id}
+                  type="button"
+                  onClick={() => select(d)}
+                  onMouseEnter={() => setHovered(d.device_id)}
+                  onMouseLeave={() => setHovered((h) => (h === d.device_id ? null : h))}
+                  aria-label={`${d.name} — ${t.label}`}
+                  className="group absolute z-10 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full outline-none"
+                  style={{ left: `${x}%`, top: `${y}%` }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ ...spring.snappy, delay: (angle / 360) * 0.9 }}
                 >
-                  <Icon size={12} aria-hidden />
-                </span>
-                {(showAllLabels || active) && (
-                  <span className="pointer-events-none absolute left-1/2 top-full mt-1 max-w-[96px] -translate-x-1/2 truncate whitespace-nowrap rounded bg-ink/80 px-1 font-mono text-[9px] leading-tight text-ivory-dim">
-                    {d.name}
+                  <span
+                    className={clsx(
+                      "relative grid h-7 w-7 place-items-center rounded-full bg-surface shadow-pop ring-1 transition-transform duration-150 ease-standard",
+                      t.text,
+                      t.ring,
+                      active && "scale-125",
+                      !d.online && "opacity-50",
+                      "group-focus-visible:ring-2 group-focus-visible:ring-mint/60",
+                    )}
+                  >
+                    {tier === "ready" && <span aria-hidden className="absolute inset-0 animate-pulse-ring rounded-full border border-mint/50" />}
+                    <Icon icon={glyph} size={13} />
                   </span>
-                )}
-              </motion.button>
-            );
-          })}
-        </AnimatePresence>
+                  {(showAllLabels || active) && (
+                    <span className="pointer-events-none absolute left-1/2 top-[calc(100%-4px)] max-w-[96px] -translate-x-1/2 truncate whitespace-nowrap rounded-full bg-surface px-1.5 py-px text-micro text-fg-2 shadow-pop">
+                      {d.name}
+                    </span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </AnimatePresence>
 
-        {/* legend */}
-        <div className="pointer-events-none absolute bottom-0 right-0 flex flex-col items-end gap-0.5 font-mono text-[8.5px] uppercase tracking-[0.12em] text-mute">
-          <span className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-mint" /> ready
-          </span>
-          <span className="flex items-center gap-1 text-amber/80">
-            <svg width="7" height="7" viewBox="0 0 8 8" aria-hidden>
-              <path d="M4 0.5 L7.5 7.5 H0.5 Z" fill="currentColor" />
-            </svg>
-            pair
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-[1px] border border-current" /> seen
-          </span>
+          {/* legend */}
+          <div className="pointer-events-none absolute bottom-0 right-0 flex flex-col items-end gap-1 text-micro text-fg-3">
+            <span className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-mint" /> Ready
+            </span>
+            <span className="flex items-center gap-1">
+              <svg width="7" height="7" viewBox="0 0 8 8" aria-hidden className="text-amber">
+                <path d="M4 0.5 L7.5 7.5 H0.5 Z" fill="currentColor" />
+              </svg>
+              Pair
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-[1px] border border-current" /> Seen
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* error / empty / note */}
+      {/* error / empty / loading */}
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-coral/30 bg-coral/10 px-3 py-2 text-[12px] text-coral" role="alert">
-          <TriangleAlert size={14} className="mt-0.5 shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1">Scan failed: {error}</span>
+        <div className="flex items-start gap-2 rounded-tile bg-coral/10 px-3 py-2.5 text-body-sm text-coral" role="alert">
+          <Icon icon={TriangleAlert} size={15} className="mt-0.5 shrink-0" />
+          <span className="min-w-0 flex-1 break-words">Scan failed: {error}</span>
         </div>
       )}
       {empty && (
-        <div className="rounded-xl border border-line bg-ink-3/60 px-3 py-3 text-[12.5px] leading-relaxed text-ivory-dim">
-          No devices answered on this network. Venue Wi-Fi often isolates clients — try a phone hotspot or your home network.
-          {result?.note && result.note !== "No devices answered on this network. Venue Wi-Fi often isolates clients — try a phone hotspot or your home network." && (
-            <span className="mt-1 block text-[11px] text-mute">{result.note}</span>
-          )}
-        </div>
+        <EmptyState
+          illustration="router"
+          fallback={Router}
+          title="No devices answered"
+          subtitle={
+            <>
+              Venue Wi-Fi often isolates clients — try a phone hotspot or your home network.
+              {result?.note && result.note !== EMPTY_NOTE && <span className="mt-1 block text-caption">{result.note}</span>}
+            </>
+          }
+          className="py-2"
+        />
       )}
-      {!result && !scanning && !error && (
-        <p className="text-center text-[12px] text-mute">Scan this computer&apos;s local network for lights, plugs and hubs with documented local APIs.</p>
-      )}
+      {scanning && devices.length === 0 && <SkeletonRows rows={3} />}
 
       {/* device list */}
       {devices.length > 0 && (
-        <ul className="ghost-scroll -mx-1 min-h-0 flex-1 space-y-1 overflow-y-auto px-1" aria-label="Devices found on the local network">
+        <ul className="ghost-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto" aria-label="Devices found on the local network">
           {devices.map((d, i) => {
             const m = metaOf(d);
             const tier = tierOf(d);
-            const Icon = iconOf(d);
+            const glyph = iconOf(d);
             const active = selected === d.device_id;
             return (
-              <motion.li key={d.device_id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.03 }}>
+              <motion.li key={d.device_id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.04, duration: duration.base, ease: ease.standard }}>
                 <button
                   type="button"
                   onClick={() => select(d)}
@@ -476,24 +484,24 @@ export default function NetworkScanWidget({ props, report, emit, focused }: Widg
                   onMouseLeave={() => setHovered((h) => (h === d.device_id ? null : h))}
                   title={m.reason ? `${m.reason}${m.instructions ? `\n${m.instructions}` : ""}` : undefined}
                   className={clsx(
-                    "flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition",
-                    active ? "border-mint/40 bg-mint/5" : "border-transparent hover:border-line hover:bg-ink-3/70",
+                    "flex w-full min-w-0 items-center gap-3 rounded-tile px-3 py-2.5 text-left transition-colors duration-150 ease-standard",
+                    active ? "bg-mint/10" : "hover:bg-tint",
                     focused && active && "ring-1 ring-mint/30",
                   )}
                 >
-                  <span className={clsx("grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-ink-4/80", TIER[tier].text)}>
-                    <Icon size={14} aria-hidden />
+                  <span className={clsx("grid h-9 w-9 shrink-0 place-items-center rounded-full bg-tint", TIER[tier].text)}>
+                    <Icon icon={glyph} size={16} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-medium text-ivory">{d.name}</span>
-                    <span className="block truncate text-[11px] text-mute">
+                    <span className="block truncate text-body font-medium text-fg">{d.name}</span>
+                    <span className="block truncate text-caption text-fg-3">
                       {[d.vendor, d.model].filter(Boolean).join(" · ") || d.device_class}
                       {tier !== "ready" && m.reason ? ` — ${m.reason}` : ""}
                     </span>
                   </span>
                   <span className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex">
-                    <span className="font-mono text-[10.5px] text-ivory-dim">{m.ip ?? m.entity_id ?? "—"}</span>
-                    <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-mute">{m.driver ?? "—"}</span>
+                    <span className="font-mono text-caption text-fg-2">{m.ip ?? m.entity_id ?? "—"}</span>
+                    <span className="text-label text-fg-3">{m.driver ?? "—"}</span>
                   </span>
                   <TierBadge tier={tier} offline={!d.online} />
                 </button>

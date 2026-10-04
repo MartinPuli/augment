@@ -19,6 +19,7 @@ app.get("*", async (c) => {
     limit: Number(c.req.query("limit")) || 10,
   }));
 });
+
 app.onError((error, c) => {
   if (error instanceof GhostError) return c.json({ error: error.message, code: error.code }, error.status as 400);
   console.error("[ghost] connection memory unavailable", error.message);

@@ -1,22 +1,11 @@
-import type { CSSProperties } from "react";
+import { duration, ease } from "@/components/ui/motion";
 
-export const ink = "#14161a";
-export const slate = "#5b6472";
-export const card: CSSProperties = {
-  background: "rgba(255,255,255,.55)",
-  backdropFilter: "blur(18px)",
-  WebkitBackdropFilter: "blur(18px)",
-  border: "1px solid rgba(255,255,255,.7)",
-  borderRadius: 14,
-  padding: "10px 12px",
-  color: ink,
-};
-export const col: CSSProperties = { display: "flex", flexDirection: "column", gap: 8, color: ink, fontSize: 14, minWidth: 0 };
-export const sub: CSSProperties = { color: slate, fontSize: 12 };
-export const link: CSSProperties = { color: ink, textDecoration: "none" };
-
+/** Formats an ISO timestamp for display; "" for anything that isn't a valid date string. */
 export function fmtTime(iso: unknown, opts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" }): string {
   if (typeof iso !== "string") return "";
   const d = new Date(iso);
   return Number.isFinite(d.getTime()) ? d.toLocaleString(undefined, opts) : "";
 }
+
+/** Motion transition for the n-th row of a list that staggers in on first render. */
+export const stagger = (i: number, base = 0) => ({ delay: base + Math.min(i, 12) * 0.04, duration: duration.base, ease: ease.standard });

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ArrowUp, Blocks, Square } from "lucide";
+import { ArrowUp, Square } from "lucide";
 import { useGhost } from "@/lib/store";
 import { cancelRun, sendToPolty } from "@/lib/agent/runtime";
 import { listener, type ListenMode } from "@/lib/voice/listener";
@@ -11,11 +11,9 @@ import { speaker } from "@/lib/voice/speaker";
 import { Icon, type IconNode } from "@/components/ui/Icon";
 import { duration, ease, haptic, spring } from "@/components/ui/motion";
 import { VoiceOrb, type OrbTone } from "./VoiceOrb";
-import ConnectorsPanel from "@/components/connectors/ConnectorsPanel";
 
 /**
- * The voice dock: one microphone in the middle (tap, or hold Space, to talk) and Connectors beside
- * it. Polty answers by voice, so there is no visible transcript: the caption is kept for screen
+ * The voice dock: one microphone in the middle (tap, or hold Space, to talk). Polty answers by voice, so there is no visible transcript: the caption is kept for screen
  * readers only. A Stop button appears only while Polty is working or speaking. To type instead,
  * just start typing anywhere — a field opens above the mic.
  *
@@ -31,7 +29,6 @@ export function VoiceDock() {
   const liveSession = useGhost((s) => (s as { liveSession?: "off" | "connecting" | "live" }).liveSession ?? "off");
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
-  const [connOpen, setConnOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listening = activity === "listening";
   const busy = running || activity === "speaking" || activity === "thinking" || activity === "acting";
@@ -130,6 +127,7 @@ export function VoiceDock() {
     haptic(10);
     speaker?.unlock();
     setDraft("");
+    setTyping(false);
     deliver(t);
   };
 
@@ -243,21 +241,8 @@ export function VoiceDock() {
           </AnimatePresence>
         </div>
         <VoiceOrb tone={tone} label={listening ? (live ? "End live session" : "Send") : "Talk to Polty"} onPress={toggleMic} />
-        <div className="grid place-items-center">
-          {!connOpen && (
-            <RoundButton
-              label="Connectors"
-              icon={Blocks}
-              layoutId="connectors-surface"
-              onClick={() => {
-                haptic();
-                setConnOpen(true);
-              }}
-            />
-          )}
-        </div>
+        <div aria-hidden />
       </div>
-      <ConnectorsPanel open={connOpen} onClose={() => setConnOpen(false)} />
 
       {/* status line */}
       <div className="mt-2.5 flex h-5 items-center justify-center text-caption text-fg-3" aria-live="polite">

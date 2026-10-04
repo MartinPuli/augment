@@ -6,10 +6,10 @@ export const metadata: Metadata = { title: "Connectors · GHOST" };
 
 export default function ConnectorsPage() {
   return (
-    <main className="min-h-dvh bg-[radial-gradient(1200px_600px_at_10%_-10%,rgb(45_212_191/0.16),transparent),radial-gradient(900px_500px_at_100%_0%,rgb(167_139_250/0.14),transparent)] bg-page px-4 py-8 sm:px-8 sm:py-12">
-      <div className="mx-auto max-w-6xl">
-        <Link href="/" className="ghost-chip inline-flex h-8 items-center rounded-full px-3 text-caption font-medium text-fg-2 hover:text-fg">
-          ← Back to Polty
+    <main className="min-h-dvh px-4 pb-16 pt-[max(24px,env(safe-area-inset-top))] sm:px-8 sm:pt-10">
+      <div className="ghost-glass mx-auto max-w-6xl rounded-card px-4 py-6 sm:px-8 sm:py-8">
+        <Link href="/" className="ghost-chip inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-caption font-medium text-fg-2 transition-colors hover:text-fg">
+          <span aria-hidden>←</span> Back to Polty
         </Link>
         <div className="mt-6">
           <ConnectorsGallery />

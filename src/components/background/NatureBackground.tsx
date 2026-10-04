@@ -87,37 +87,34 @@ export function NatureBackground() {
     setSrcIdx((i) => i + 1);
   };
 
+  const layer = (i: 0 | 1) => ({
+    src,
+    autoPlay: i === 0,
+    muted: true,
+    playsInline: true,
+    preload: "auto" as const,
+    disablePictureInPicture: true,
+    onCanPlay: i === 0 ? () => setReady(true) : undefined,
+    onError: i === 0 ? onError : undefined,
+    className: "ghost-bg-media absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out",
+    style: { opacity: ready && front === i ? 1 : 0, transitionDuration: `${i === 0 && !ready ? 900 : FADE_S * 1000}ms` },
+  });
+
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div className="ghost-bg-fallback absolute inset-0" />
-      {!failed && (
-        <div
-          className="ghost-bg-media absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${LOCAL_POSTER}), url(${REMOTE_POSTER})` }}
-        />
-      )}
-      {!still && !failed && (
-        <>
-          {[a, b].map((ref, i) => (
-            <video
-              key={`${src}-${i}`}
-              ref={ref}
-              src={src}
-              autoPlay={i === 0}
-              muted
-              playsInline
-              preload="auto"
-              disablePictureInPicture
-              onCanPlay={i === 0 ? () => setReady(true) : undefined}
-              onError={i === 0 ? onError : undefined}
-              className="ghost-bg-media absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out"
-              style={{ opacity: ready && front === i ? 1 : 0, transitionDuration: `${i === 0 && !ready ? 900 : FADE_S * 1000}ms` }}
-            />
-          ))}
-        </>
-      )}
-      <div className="ghost-bg-tint absolute inset-0" />
+      {/* the footage is a whisper of colour and movement under a clean, warm field */}
+      <div className="absolute inset-0 opacity-40">
+        {!failed && <div className="ghost-bg-media absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${LOCAL_POSTER}), url(${REMOTE_POSTER})` }} />}
+        {!still && !failed && (
+          <>
+            <video key={`${src}-0`} ref={a} {...layer(0)} />
+            <video key={`${src}-1`} ref={b} {...layer(1)} />
+          </>
+        )}
+      </div>
       <div className="ghost-bg-wash absolute inset-0" />
+      <div className="ghost-bg-glow absolute -inset-[10%]" />
       <div className="ghost-bg-vignette absolute inset-0" />
     </div>
   );

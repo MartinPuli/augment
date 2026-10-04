@@ -1,24 +1,27 @@
 "use client";
 
 import Link from "next/link";
-
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
-import { Brain, KeyRound, Zap } from "lucide";
+import { Blocks, Brain, KeyRound, Zap } from "lucide";
 import { useGhost } from "@/lib/store";
+import ConnectorsPanel from "@/components/connectors/ConnectorsPanel";
+import { WorkspaceToggle } from "@/components/workspace/Workspace";
 import { Icon, type IconNode } from "@/components/ui/Icon";
 import { ease, haptic, spring } from "@/components/ui/motion";
 
 /**
- * Deliberately quiet: only the brain switch is always there (Connectors lives in the voice dock).
- * Access and spending chips appear only while they matter (a lease is counting down, a budget is set).
+ * Deliberately quiet: Connectors and the brain switch are always there. Access and spending chips
+ * appear only while they matter (a lease is counting down, a budget is set). The Connectors button
+ * shares `layoutId="connectors-surface"` with the modal, which grows out of it and back into it.
  */
 export function TopBar() {
   const me = useGhost((s) => s.me);
   const budget = useGhost((s) => s.budget);
   const leases = useGhost((s) => s.leases);
   const [now, setNow] = useState(() => Date.now());
+  const [connOpen, setConnOpen] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -32,7 +35,7 @@ export function TopBar() {
   const remaining = Math.max(0, budget.limit_cents - budget.spent_cents);
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-end gap-2 px-3 pt-[max(12px,env(safe-area-inset-top))] sm:px-5 sm:pt-4">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-end gap-1.5 px-3 sm:gap-2 pt-[max(12px,env(safe-area-inset-top))] sm:px-5 sm:pt-4">
       <AnimatePresence initial={false}>
         {budget.goal && (
           <motion.div
@@ -72,8 +75,37 @@ export function TopBar() {
           </motion.span>
         )}
       </AnimatePresence>
+      <WorkspaceToggle />
+      <div className="grid h-10 w-10 shrink-0 place-items-center">
+        {!connOpen && (
+          <motion.button
+            type="button"
+            layoutId="connectors-surface"
+            onClick={() => {
+              haptic();
+              setConnOpen(true);
+            }}
+            aria-label="Connectors"
+            title="Connectors"
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.9 }}
+            transition={spring.snappy}
+            style={{ borderRadius: 999 }}
+            className="ghost-chip pointer-events-auto grid h-10 w-10 place-items-center text-fg-2 transition-colors duration-150 hover:bg-white/90 hover:text-fg"
+          >
+            <Icon icon={Blocks} size={17} strokeWidth={1.9} />
+          </motion.button>
+        )}
+      </div>
       <BrainToggle />
-      <Link href="/devices" className="ghost-chip pointer-events-auto inline-flex h-10 items-center rounded-full px-3 text-caption text-fg-2" aria-label="Connect devices">Devices</Link>
+      <ConnectorsPanel open={connOpen} onClose={() => setConnOpen(false)} />
+      <Link
+        href="/devices"
+        aria-label="Connect devices"
+        className="ghost-chip pointer-events-auto inline-flex h-10 items-center rounded-full px-3.5 text-caption font-medium text-fg-2 transition-colors duration-150 hover:bg-white/90 hover:text-fg"
+      >
+        Devices
+      </Link>
     </header>
   );
 }
@@ -116,7 +148,7 @@ function BrainToggle() {
               useGhost.getState().set({ brain: o.id });
             }}
             className={clsx(
-              "relative z-10 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-medium transition-colors duration-150",
+              "relative z-10 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-caption font-medium transition-colors duration-150 min-[420px]:px-3",
               on ? "text-fg-inverse" : "text-fg-2 hover:text-fg",
             )}
           >
@@ -128,7 +160,7 @@ function BrainToggle() {
               />
             )}
             <Icon icon={o.icon} size={13} strokeWidth={2.2} />
-            <span>{o.label}</span>
+            <span className="hidden min-[420px]:inline">{o.label}</span>
           </button>
         );
       })}

@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { FormEvent, ReactNode } from "react";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
+import { AnimatePresence, motion } from "motion/react";
 import {
+  ArrowLeft,
   Ban,
   Bot,
   Camera,
@@ -14,6 +17,7 @@ import {
   Cpu,
   Gauge,
   Ghost,
+  KeyRound,
   Lightbulb,
   LoaderCircle,
   Mic,
@@ -25,6 +29,7 @@ import {
   QrCode,
   RefreshCw,
   Router,
+  SatelliteDish,
   ServerCrash,
   Smartphone,
   Speaker,
@@ -33,8 +38,11 @@ import {
   Wallet,
   Watch,
   X,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+} from "lucide";
+import { Icon, type IconNode } from "@/components/ui/Icon";
+import { Illustration } from "@/components/ui/Illustration";
+import type { IllustrationName } from "@/components/ui/illustrations";
+import { duration, ease, haptic, spring } from "@/components/ui/motion";
 import type { AccessType, CatalogStatus, Device, Lease, LeaseState, MeResponse, PairingResponse } from "@/lib/ghost/contracts";
 import { DEV_LEDGER_LABEL } from "@/lib/ghost/client/api-types";
 import type { DevicesResponseItem, LeaseView, LedgerEntry, LedgerResponse, PairingInfo } from "@/lib/ghost/client/api-types";
@@ -144,16 +152,16 @@ const TONE_TEXT: Record<Tone, string> = {
   amber: "text-amber",
   coral: "text-coral",
   violet: "text-violet",
-  mute: "text-mute",
-  ivory: "text-ivory-dim",
+  mute: "text-fg-3",
+  ivory: "text-fg-2",
 };
 const TONE_BADGE: Record<Tone, string> = {
-  mint: "border-mint/30 bg-mint/10 text-mint",
-  amber: "border-amber/30 bg-amber/10 text-amber",
-  coral: "border-coral/35 bg-coral/10 text-coral",
-  violet: "border-violet/30 bg-violet/10 text-violet",
-  mute: "border-line bg-ink-3 text-mute",
-  ivory: "border-line-strong bg-ink-3 text-ivory-dim",
+  mint: "bg-mint/10 text-mint",
+  amber: "bg-amber/10 text-amber",
+  coral: "bg-coral/10 text-coral",
+  violet: "bg-violet/10 text-violet",
+  mute: "bg-tint text-fg-3",
+  ivory: "bg-tint text-fg-2",
 };
 
 /** State marker: shape AND colour, so state never depends on colour alone. */
@@ -179,11 +187,23 @@ function Dot({ shape, tone, className }: { shape: Shape; tone: Tone; className?:
   }
 }
 
-function Badge({ tone, children, className }: { tone: Tone; children: ReactNode; className?: string }) {
+function Badge({
+  tone,
+  children,
+  className,
+  wrap,
+}: {
+  tone: Tone;
+  children: ReactNode;
+  className?: string;
+  /** Long sentences may wrap on narrow screens; short status badges never do. */
+  wrap?: boolean;
+}) {
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-medium",
+        wrap ? "text-left" : "whitespace-nowrap",
         TONE_BADGE[tone],
         className,
       )}
@@ -193,11 +213,12 @@ function Badge({ tone, children, className }: { tone: Tone; children: ReactNode;
   );
 }
 
+/** Raw identifiers (capability ids): mono, quiet, truncated. */
 function Chip({ children, title }: { children: ReactNode; title?: string }) {
   return (
     <span
       title={title}
-      className="inline-block max-w-full truncate rounded-md border border-line bg-ink-2 px-2 py-0.5 font-mono text-[11px] text-ivory-dim"
+      className="inline-block max-w-full truncate rounded-full bg-tint px-2.5 py-1 font-mono text-label text-fg-2"
     >
       {children}
     </span>
@@ -218,11 +239,11 @@ function Countdown({
   const now = useNow();
   const target = to ? Date.parse(to) : NaN;
   if (!to || Number.isNaN(target) || now === 0) {
-    return <span className={cx("font-mono tabular-nums", className)}>{pendingLabel}</span>;
+    return <span className={cx("tabular-nums", className)}>{pendingLabel}</span>;
   }
   const ms = target - now;
   return (
-    <span className={cx("font-mono tabular-nums", ms <= 0 && "text-coral", className)}>
+    <span className={cx("tabular-nums", ms <= 0 && "text-coral", className)}>
       {ms <= 0 ? expiredLabel : formatRemaining(ms)}
     </span>
   );
@@ -230,96 +251,207 @@ function Countdown({
 
 function InlineError({ children }: { children: ReactNode }) {
   return (
-    <p role="alert" className="flex items-start gap-1.5 text-sm text-coral">
-      <OctagonX className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <span>{children}</span>
+    <p role="alert" className="flex items-start gap-2 text-body-sm text-coral">
+      <Icon icon={OctagonX} size={16} className="mt-0.5 shrink-0" />
+      <span className="min-w-0">{children}</span>
     </p>
   );
 }
 
-function EmptyState({ children }: { children: ReactNode }) {
+/** Empty state: illustration, a serif title, one quiet line, and an action when there is one. */
+function EmptyState({
+  illustration,
+  fallback,
+  title,
+  children,
+  action,
+  size = 56,
+}: {
+  illustration: IllustrationName;
+  fallback: IconNode;
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+  size?: number;
+}) {
   return (
-    <div className="rounded-2xl border border-dashed border-line-strong px-5 py-8 text-center text-sm text-mute">
-      {children}
+    <div className="ghost-glass flex flex-col items-center gap-3 rounded-card px-6 py-8 text-center">
+      <Illustration name={illustration} size={size} fallback={fallback} />
+      <div className="flex max-w-sm flex-col gap-1">
+        <p className="font-serif text-heading text-fg">{title}</p>
+        {children && <p className="text-body-sm text-fg-3">{children}</p>}
+      </div>
+      {action && <div className="mt-1">{action}</div>}
     </div>
+  );
+}
+
+/** Skeleton block (shimmer), shaped by the caller like the content it stands in for. */
+function Skel({ className }: { className?: string }) {
+  const rounded = className?.includes("rounded-") ? null : "rounded-full";
+  return <span aria-hidden className={cx("ghost-skeleton block", rounded, className)} />;
+}
+
+/** Placeholder for a device or lease card while the console first connects. */
+function CardSkeleton({ tall }: { tall?: boolean }) {
+  return (
+    <div aria-hidden className="ghost-glass flex flex-col gap-4 rounded-card p-5">
+      <div className="flex items-center gap-3">
+        <Skel className="size-11 rounded-tile" />
+        <div className="flex flex-1 flex-col gap-2">
+          <Skel className="h-4 w-1/2" />
+          <Skel className="h-3 w-1/3" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Skel className="h-6 w-20" />
+        <Skel className="h-6 w-24" />
+      </div>
+      <Skel className={cx("w-full rounded-tile", tall ? "h-48" : "h-24")} />
+      {!tall && <Skel className="h-12 w-full" />}
+    </div>
+  );
+}
+
+function PendingSkeleton() {
+  return (
+    <div aria-hidden className="ghost-glass flex flex-col gap-3 rounded-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-1 flex-col gap-2">
+          <Skel className="h-4 w-1/2" />
+          <Skel className="h-3 w-1/3" />
+        </div>
+        <Skel className="h-6 w-24" />
+      </div>
+      <Skel className="h-9 w-full rounded-tile" />
+      <div className="flex gap-2">
+        <Skel className="h-10 flex-1" />
+        <Skel className="h-10 flex-1" />
+      </div>
+    </div>
+  );
+}
+
+/** Two columns where there is room: beside the sidebar only on wide screens. */
+const CARD_GRID = "grid gap-4 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2";
+
+/** List items fade up once, staggered, when they first mount; later re-renders never re-animate. */
+function Appear({ index, children }: { index: number; children: ReactNode }) {
+  return (
+    <motion.div
+      className="min-w-0"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...spring.gentle, delay: Math.min(index, 8) * 0.045 }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
 function SectionHeader({ id, title, count, hint }: { id?: string; title: string; count?: number; hint?: ReactNode }) {
   return (
-    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-      <h2 id={id} className="flex items-baseline gap-3 font-display text-base font-semibold tracking-wide text-ivory">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
+      <h2 id={id} className="flex items-center gap-2.5 font-serif text-heading text-fg">
         {title}
-        {typeof count === "number" && <span className="font-mono text-xs font-normal text-mute">{count}</span>}
+        {typeof count === "number" && (
+          <span className="grid h-6 min-w-6 place-items-center rounded-full bg-tint px-2 font-sans text-caption font-medium text-fg-2 tabular-nums">
+            {count}
+          </span>
+        )}
       </h2>
-      {hint && <div className="hud-label">{hint}</div>}
+      {hint && <div className="text-caption text-fg-3">{hint}</div>}
     </div>
   );
 }
 
+/*
+ * Buttons. Primary = dark pill; secondary = glass chip; destructive = coral, and the Stop control
+ * is deliberately the largest button on a lease card. All press-scale, all dim when disabled.
+ */
+// Busy (aria-busy) buttons stay fully opaque: they read as "working", not "unavailable".
 const btnBase =
-  "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:cursor-not-allowed disabled:opacity-60";
-const btnSm = "px-4 py-2 text-sm";
-const btnMint = cx(btnBase, btnSm, "bg-mint text-ink hover:bg-mint/85 focus-visible:ring-mint/60");
-const btnStop = cx(btnBase, "px-5 py-3 text-base bg-coral text-ink hover:bg-coral/85 focus-visible:ring-coral/60");
-const btnGhost = cx(btnBase, btnSm, "border border-line-strong bg-ink-3 text-ivory hover:bg-ink-4 focus-visible:ring-line-strong");
-const btnIvory = cx(btnBase, btnSm, "bg-ivory text-ink hover:bg-ivory-dim focus-visible:ring-ivory/50");
+  "inline-flex select-none items-center justify-center gap-2 rounded-full transition-[transform,background-color,color,box-shadow,opacity] duration-100 ease-standard active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 aria-busy:cursor-progress aria-busy:opacity-100";
+const btnSm = "min-h-10 px-4 text-body-sm font-medium";
+const btnPrimary = cx(btnBase, btnSm, "bg-fg text-fg-inverse shadow-pop hover:bg-fg/85");
+const btnPrimaryLg = cx(btnBase, "min-h-12 px-5 text-body font-medium bg-fg text-fg-inverse shadow-pop hover:bg-fg/85");
+/** Secondary without horizontal padding, for callers that set their own (no conflicting px-*). */
+const btnSecondaryBare = cx(btnBase, "min-h-10 text-body-sm font-medium ghost-chip text-fg hover:bg-white/90");
+const btnSecondary = cx(btnSecondaryBare, "px-4");
+const btnStop = cx(
+  btnBase,
+  "min-h-12 px-5 text-body font-semibold bg-coral/10 text-coral ring-1 ring-coral/35 hover:bg-coral hover:text-fg-inverse hover:ring-coral",
+);
+const btnIconRound =
+  "grid size-10 shrink-0 place-items-center rounded-full text-fg-3 transition-[transform,background-color,color] duration-100 ease-standard hover:bg-tint hover:text-fg active:scale-[0.97]";
 
 const inputCls =
-  "w-full rounded-lg border border-line bg-ink px-3 py-2 font-mono text-sm text-ivory placeholder:text-mute focus:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/30";
+  "h-10 w-full rounded-tile bg-surface px-3 text-body-sm text-fg tabular-nums ring-1 ring-line ring-inset transition-shadow duration-100 placeholder:text-fg-3 hover:ring-line-strong";
+
+/** Small sentence-case field label. */
+const labelCls = "text-caption text-fg-3";
 
 /* ------------------------------------------------------------------ */
 /* Device presentation                                                 */
 /* ------------------------------------------------------------------ */
 
-/** Static icon per device class (a switch of elements, so no component is created during render). */
-function DeviceGlyph({ device, className }: { device: Pick<Device, "device_class" | "capabilities">; className?: string }) {
-  const p = { className, "aria-hidden": true } as const;
+/** Icon data per device class. */
+function deviceIcon(device: Pick<Device, "device_class" | "capabilities">): IconNode {
   switch (device.device_class) {
     case "camera":
-      return <Camera {...p} />;
+      return Camera;
     case "light":
-      return <Lightbulb {...p} />;
+      return Lightbulb;
     case "plug":
-      return <Plug {...p} />;
+      return Plug;
     case "switch":
-      return <ToggleLeft {...p} />;
+      return ToggleLeft;
     case "sensor":
-      return device.capabilities?.some((c) => /temp/i.test(c.semantic_type) || /temp/i.test(c.capability_id)) ? (
-        <Thermometer {...p} />
-      ) : (
-        <Gauge {...p} />
-      );
+      return device.capabilities?.some((c) => /temp/i.test(c.semantic_type) || /temp/i.test(c.capability_id))
+        ? Thermometer
+        : Gauge;
     case "instrument":
-      return <Gauge {...p} />;
+      return Gauge;
     case "phone":
-      return <Smartphone {...p} />;
+      return Smartphone;
     case "computer":
     case "display":
-      return <Monitor {...p} />;
+      return Monitor;
     case "speaker":
     case "media":
-      return <Speaker {...p} />;
+      return Speaker;
     case "microphone":
-      return <Mic {...p} />;
+      return Mic;
     case "robot":
-      return <Bot {...p} />;
+      return Bot;
     case "printer":
-      return <Printer {...p} />;
+      return Printer;
     case "wearable":
-      return <Watch {...p} />;
+      return Watch;
     case "hub":
-      return <Router {...p} />;
+      return Router;
     default:
-      return <Cpu {...p} />;
+      return Cpu;
   }
 }
 
-const STATUS_META: Record<CatalogStatus, { label: string; tone: Tone; Icon: LucideIcon }> = {
-  verified: { label: "Verified", tone: "mint", Icon: Check },
-  configured: { label: "Configured", tone: "ivory", Icon: CircleDot },
-  candidate: { label: "Candidate", tone: "amber", Icon: CircleDashed },
-  unavailable: { label: "Unavailable", tone: "coral", Icon: Ban },
+function DeviceGlyph({
+  device,
+  className,
+  size = 20,
+}: {
+  device: Pick<Device, "device_class" | "capabilities">;
+  className?: string;
+  size?: number;
+}) {
+  return <Icon icon={deviceIcon(device)} size={size} className={className} />;
+}
+
+const STATUS_META: Record<CatalogStatus, { label: string; tone: Tone; icon: IconNode }> = {
+  verified: { label: "Verified", tone: "mint", icon: Check },
+  configured: { label: "Configured", tone: "ivory", icon: CircleDot },
+  candidate: { label: "Candidate", tone: "amber", icon: CircleDashed },
+  unavailable: { label: "Unavailable", tone: "coral", icon: Ban },
 };
 
 const ACCESS_LABEL: Record<AccessType, string> = {
@@ -331,7 +463,7 @@ const ACCESS_LABEL: Record<AccessType, string> = {
 
 function OnlineIndicator({ online }: { online: boolean }) {
   return (
-    <span className={cx("inline-flex items-center gap-1.5 text-xs font-medium", online ? "text-mint" : "text-mute")}>
+    <span className={cx("inline-flex shrink-0 items-center gap-1.5 text-caption font-medium", online ? "text-mint" : "text-fg-3")}>
       <Dot shape={online ? "filled" : "hollow"} tone={online ? "mint" : "mute"} />
       {online ? "Online" : "Offline"}
     </span>
@@ -434,11 +566,11 @@ function TermsForm({
   const saving = save.kind === "saving";
 
   return (
-    <form onSubmit={submit} className="rounded-xl border border-line bg-ink-2/70 p-4" noValidate>
-      <div className="hud-label mb-3">Terms</div>
+    <form onSubmit={submit} className="mt-auto rounded-tile bg-surface-2 p-4" noValidate>
+      <div className="mb-3 text-body-sm font-medium text-fg">Terms</div>
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-ivory-dim">Price (USD)</span>
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={labelCls}>Price (USD)</span>
           <input
             className={inputCls}
             inputMode="decimal"
@@ -449,8 +581,8 @@ function TermsForm({
             aria-describedby={`terms-help-${id}`}
           />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-ivory-dim">Max duration (s)</span>
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={labelCls}>Max duration (s)</span>
           <input
             className={inputCls}
             inputMode="numeric"
@@ -460,8 +592,8 @@ function TermsForm({
             placeholder="300"
           />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-ivory-dim">Quota (uses)</span>
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={labelCls}>Quota (uses)</span>
           <input
             className={inputCls}
             inputMode="numeric"
@@ -471,8 +603,8 @@ function TermsForm({
             placeholder="Unlimited"
           />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-ivory-dim">Floor (USD)</span>
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={labelCls}>Floor (USD)</span>
           <input
             className={inputCls}
             inputMode="decimal"
@@ -483,32 +615,32 @@ function TermsForm({
           />
         </label>
       </div>
-      <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-sm text-ivory-dim">
+      <label className="mt-3 flex min-h-10 cursor-pointer items-center gap-2.5 text-body-sm text-fg-2">
         <input
           type="checkbox"
-          className="size-4 accent-mint"
+          className="size-4 shrink-0 accent-mint"
           checked={draft.approval}
           onChange={(e) => set("approval", e.target.checked)}
         />
         Require my approval for each lease
       </label>
-      <p id={`terms-help-${id}`} className="mt-2 text-[11px] text-mute">
+      <p id={`terms-help-${id}`} className="mt-1 text-caption text-fg-3">
         Blank quota = unlimited. Blank floor = the price is the floor.
       </p>
-      <div className="mt-3 flex min-h-9 flex-wrap items-center justify-between gap-3">
+      <div className="mt-4 flex min-h-10 flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1" aria-live="polite">
           {localError ? (
             <InlineError>{localError}</InlineError>
           ) : save.kind === "error" ? (
             <InlineError>{save.message}</InlineError>
           ) : save.kind === "saved" ? (
-            <span className="inline-flex items-center gap-1.5 text-sm text-mint">
-              <Check className="size-4" aria-hidden /> Saved
+            <span className="inline-flex items-center gap-1.5 text-body-sm font-medium text-mint">
+              <Icon icon={Check} size={16} /> Saved
             </span>
           ) : null}
         </div>
-        <button type="submit" className={btnGhost} disabled={saving}>
-          {saving ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : null}
+        <button type="submit" className={btnSecondary} disabled={saving} aria-busy={saving || undefined}>
+          <Icon icon={saving ? LoaderCircle : Check} size={16} spring="snappy" className={saving ? "animate-spin" : undefined} />
           {saving ? "Saving…" : "Save terms"}
         </button>
       </div>
@@ -535,17 +667,17 @@ function DeviceCard({ device, onUpdated }: { device: DevicesResponseItem; onUpda
   const onEdit = () => setSave((s) => (s.kind === "saved" || s.kind === "error" ? { kind: "idle" } : s));
 
   return (
-    <article className="ghost-glass flex min-w-0 flex-col gap-4 rounded-2xl p-5">
+    <article className="ghost-glass flex h-full min-w-0 flex-col gap-4 rounded-card p-5">
       <div className="flex items-start gap-3">
-        <div className="grid size-11 shrink-0 place-items-center rounded-xl border border-line bg-ink-4">
-          <DeviceGlyph device={device} className="size-5 text-ivory" />
+        <div className={cx("grid size-11 shrink-0 place-items-center rounded-tile bg-tint", device.online ? "text-fg" : "text-fg-3")}>
+          <DeviceGlyph device={device} />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium text-ivory" title={device.name}>
+          <h3 className="truncate font-serif text-heading text-fg" title={device.name}>
             {device.name}
           </h3>
-          <p className="truncate font-mono text-xs text-mute">
-            {device.device_class} · {device.transport}
+          <p className="truncate text-caption text-fg-3">
+            {humanize(device.device_class)} · {device.transport}
           </p>
         </div>
         <OnlineIndicator online={device.online} />
@@ -553,7 +685,7 @@ function DeviceCard({ device, onUpdated }: { device: DevicesResponseItem; onUpda
 
       <div className="flex flex-wrap gap-2">
         <Badge tone={status.tone}>
-          <status.Icon className="size-3.5" aria-hidden />
+          <Icon icon={status.icon} size={14} />
           {status.label}
         </Badge>
         <Badge tone="mute">{ACCESS_LABEL[device.access_type] ?? humanize(device.access_type)}</Badge>
@@ -566,7 +698,7 @@ function DeviceCard({ device, onUpdated }: { device: DevicesResponseItem; onUpda
       </div>
 
       <div>
-        <div className="hud-label mb-2">Capabilities</div>
+        <div className={cx(labelCls, "mb-2")}>Capabilities</div>
         {device.capabilities.length ? (
           <div className="flex flex-wrap gap-1.5">
             {device.capabilities.map((c) => (
@@ -576,7 +708,7 @@ function DeviceCard({ device, onUpdated }: { device: DevicesResponseItem; onUpda
             ))}
           </div>
         ) : (
-          <p className="text-xs text-mute">No capabilities published.</p>
+          <p className="text-body-sm text-fg-3">No capabilities published.</p>
         )}
       </div>
 
@@ -645,19 +777,19 @@ function LeaseCard({
   return (
     <article
       className={cx(
-        "ghost-glass flex min-w-0 flex-col gap-4 rounded-2xl p-5",
-        ended && "opacity-80",
-        lease.state === "active" && !ended && "ring-1 ring-mint/20",
+        "ghost-glass flex h-full min-w-0 flex-col gap-4 rounded-card p-5",
+        ended && "opacity-75",
+        lease.state === "active" && !ended && "shadow-card ring-1 ring-mint/30",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="hud-label mb-1">Visitor</div>
-          <div className="truncate font-medium text-ivory" title={visitor}>
+          <div className={cx(labelCls, "mb-0.5")}>Visitor</div>
+          <div className="truncate font-serif text-heading text-fg" title={visitor}>
             {visitor}
           </div>
           {lease.visitor_display_name && (
-            <div className="truncate font-mono text-[11px] text-mute" title={lease.visitor_id}>
+            <div className="truncate font-mono text-label text-fg-3" title={lease.visitor_id}>
               {lease.visitor_id}
             </div>
           )}
@@ -666,8 +798,8 @@ function LeaseCard({
       </div>
 
       <div className="min-w-0">
-        <div className="hud-label mb-1.5">{names.length > 1 ? "Devices" : "Device"}</div>
-        <div className="truncate text-sm text-ivory-dim">{names.join(", ") || "—"}</div>
+        <div className={cx(labelCls, "mb-1")}>{names.length > 1 ? "Devices" : "Device"}</div>
+        <div className="truncate text-body-sm text-fg-2">{names.join(", ") || "—"}</div>
         {lease.refs.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {lease.refs.map((r) => (
@@ -679,32 +811,32 @@ function LeaseCard({
         )}
       </div>
 
-      <dl className="grid grid-cols-3 gap-3 rounded-xl border border-line bg-ink-2/70 p-3">
-        <div className="min-w-0">
-          <dt className="hud-label mb-1">Time remaining</dt>
-          <dd className="text-lg text-ivory">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-tile bg-surface-2 p-4">
+        <div className="col-span-2 min-w-0">
+          <dt className={cx(labelCls, "mb-0.5")}>Time remaining</dt>
+          <dd className="font-display text-title text-fg">
             {ended ? (
-              <span className="font-mono text-mute">—</span>
+              <span className="text-fg-3">—</span>
             ) : (
               <Countdown
                 to={lease.ends_at}
                 pendingLabel={lease.state === "reserved" ? "Not started" : "—"}
-                className={lease.ends_at ? undefined : "text-sm text-mute"}
+                className={lease.ends_at ? undefined : "font-sans text-body-sm text-fg-3"}
               />
             )}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="hud-label mb-1">Uses</dt>
-          <dd className="truncate font-mono text-sm text-ivory">{uses}</dd>
+          <dt className={cx(labelCls, "mb-0.5")}>Uses</dt>
+          <dd className="truncate text-body-sm font-medium text-fg tabular-nums">{uses}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="hud-label mb-1">Price</dt>
-          <dd className="font-mono text-sm text-ivory">
+          <dt className={cx(labelCls, "mb-0.5")}>Price</dt>
+          <dd className="text-body-sm font-medium text-fg tabular-nums">
             {lease.price_cents > 0 ? (
               <>
-                <span className="block text-[10px] uppercase tracking-wider text-mute">Test payment</span>
                 {formatCents(lease.price_cents)}
+                <span className="block text-caption font-normal text-fg-3">Test payment</span>
               </>
             ) : (
               "Free"
@@ -714,44 +846,57 @@ function LeaseCard({
       </dl>
 
       {ended ? (
-        <p className="text-sm text-ivory-dim">
+        <p className="text-body-sm text-fg-2">
           {lease.state === "revoked"
             ? "Access stopped. The visitor's lease is revoked and the device was told to stop."
             : lease.reason || "This lease has ended."}
         </p>
       ) : (
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="mt-auto flex flex-col gap-2 sm:flex-row">
           {lease.state === "reserved" && (
-            <button type="button" className={cx(btnMint, "sm:flex-1")} onClick={onApprove} disabled={busy}>
-              {action.busy === "approve" ? (
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <Check className="size-4" aria-hidden />
-              )}
+            <button
+              type="button"
+              className={cx(btnPrimaryLg, "sm:flex-1")}
+              onClick={onApprove}
+              disabled={busy}
+              aria-busy={action.busy === "approve" || undefined}
+            >
+              <Icon
+                icon={action.busy === "approve" ? LoaderCircle : Check}
+                size={18}
+                spring="snappy"
+                className={action.busy === "approve" ? "animate-spin" : undefined}
+              />
               {action.busy === "approve" ? "Approving…" : "Approve"}
             </button>
           )}
           <button
             type="button"
             className={cx(btnStop, "sm:flex-1")}
-            onClick={onRevoke}
+            onClick={() => {
+              haptic();
+              onRevoke();
+            }}
             disabled={busy}
+            aria-busy={action.busy === "revoke" || undefined}
           >
-            {action.busy === "revoke" ? (
-              <LoaderCircle className="size-5 animate-spin" aria-hidden />
-            ) : (
-              <OctagonX className="size-5" aria-hidden />
-            )}
+            <Icon
+              icon={action.busy === "revoke" ? LoaderCircle : OctagonX}
+              size={20}
+              strokeWidth={2.1}
+              spring="snappy"
+              className={action.busy === "revoke" ? "animate-spin" : undefined}
+            />
             {action.busy === "revoke" ? "Stopping…" : "Stop access"}
           </button>
         </div>
       )}
 
-      <div aria-live="polite">
+      <div aria-live="polite" className="empty:-mt-4">
         {action.error && <InlineError>{action.error}</InlineError>}
         {action.message && !action.error && (
-          <p className="flex items-center gap-1.5 text-sm text-mint">
-            <Check className="size-4" aria-hidden /> {action.message}
+          <p className="flex items-center gap-1.5 text-body-sm font-medium text-mint">
+            <Icon icon={Check} size={16} /> {action.message}
           </p>
         )}
       </div>
@@ -777,7 +922,7 @@ function PairingCode({ code }: { code: string }) {
         <span
           key={i}
           aria-hidden
-          className="grid h-14 w-11 place-items-center rounded-lg border border-line-strong bg-ink font-mono text-3xl font-semibold text-ivory sm:h-16 sm:w-12 sm:text-4xl"
+          className="grid h-14 w-11 place-items-center rounded-tile bg-surface font-mono text-title font-medium text-fg ring-1 ring-line ring-inset sm:h-16 sm:w-12"
         >
           {ch}
         </span>
@@ -814,47 +959,48 @@ function PairingDetails({
   };
 
   return (
-    <div className="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
-      <div className={cx("mx-auto rounded-2xl bg-ivory p-3 md:mx-0", expired && "opacity-30")}>
+    <div className="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-8">
+      <div
+        className={cx(
+          "mx-auto rounded-tile bg-white p-3 text-fg shadow-card transition-opacity duration-200 md:mx-0",
+          expired && "opacity-30",
+        )}
+      >
         <QRCodeSVG
           value={joinUrl}
           size={184}
           level="M"
-          bgColor="#f4efe4"
-          fgColor="#0a0b0e"
+          bgColor="transparent"
+          fgColor="currentColor"
           marginSize={1}
           title={`Join link ${joinUrl}`}
         />
       </div>
-      <div className="flex min-w-0 flex-col gap-4 md:pr-8">
+      <div className="flex min-w-0 flex-col gap-5 md:pr-10">
         <div>
-          <h2 className="font-display text-lg font-semibold text-ivory">Publish a device</h2>
-          <p className="mt-1 text-sm text-ivory-dim">
+          <h2 className="font-serif text-heading text-fg">Publish a device</h2>
+          <p className="mt-1 text-body-sm text-fg-2">
             Scan the QR on the phone or machine that holds the hardware, or open the link and enter the code. You
             confirm it here before anything goes live.
           </p>
         </div>
         <div>
-          <div className="hud-label mb-2">Pairing code</div>
+          <div className={cx(labelCls, "mb-2")}>Pairing code</div>
           <PairingCode code={pairing.code} />
         </div>
         <div className="min-w-0">
-          <div className="hud-label mb-1.5">Join link</div>
+          <div className={cx(labelCls, "mb-1.5")}>Join link</div>
           <div className="flex items-center gap-2">
             <a
               href={joinUrl}
               target="_blank"
               rel="noreferrer"
-              className="min-w-0 truncate font-mono text-sm text-violet underline-offset-4 hover:underline"
+              className="min-w-0 truncate font-mono text-body-sm text-fg-2 underline decoration-line-strong underline-offset-4 transition-colors hover:text-fg hover:decoration-fg-3"
             >
               {joinUrl}
             </a>
-            <button
-              type="button"
-              onClick={() => void copy()}
-              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1 text-xs text-ivory-dim hover:bg-ink-4"
-            >
-              {copied ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+            <button type="button" onClick={() => void copy()} className={cx(btnSecondaryBare, "shrink-0 px-3.5")}>
+              <Icon icon={copied ? Check : Copy} size={15} spring="snappy" className={copied ? "text-mint" : undefined} />
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
@@ -862,21 +1008,21 @@ function PairingDetails({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2" aria-live="polite">
           {confirmed ? (
             <Badge tone="mint">
-              <Check className="size-3.5" aria-hidden /> Device connected
+              <Icon icon={Check} size={14} /> Device connected
             </Badge>
           ) : expired ? (
             <>
               <Badge tone="coral">
                 <Dot shape="square" tone="coral" /> Code expired
               </Badge>
-              <button type="button" className={btnGhost} onClick={onNew}>
-                <RefreshCw className="size-4" aria-hidden /> New code
+              <button type="button" className={btnSecondary} onClick={onNew}>
+                <Icon icon={RefreshCw} size={16} /> New code
               </button>
             </>
           ) : (
             <>
               {presented ? (
-                <Badge tone="amber">
+                <Badge tone="amber" wrap>
                   <Dot shape="half" tone="amber" /> Device presented the code — confirm it under Pending devices
                 </Badge>
               ) : (
@@ -884,8 +1030,11 @@ function PairingDetails({
                   <Dot shape="hollow" tone="amber" /> Waiting for a device to scan
                 </Badge>
               )}
-              <span className="text-sm text-mute">
-                Expires in <Countdown to={pairing.expires_at} className="text-ivory-dim" />
+              <span className="text-body-sm text-fg-3">
+                Expires in{" "}
+                <span className="font-medium text-fg-2">
+                  <Countdown to={pairing.expires_at} />
+                </span>
               </span>
             </>
           )}
@@ -906,47 +1055,63 @@ function PublishPanel({
   onClose: () => void;
   onNew: () => void;
 }) {
-  if (state.kind === "closed") return null;
-
   return (
-    <section aria-label="Publish a device" className="ghost-glass relative rounded-2xl p-5 sm:p-6">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-3 right-3 rounded-lg p-2 text-mute hover:bg-ink-4 hover:text-ivory"
-        aria-label="Close publish panel"
-      >
-        <X className="size-4" />
-      </button>
+    <AnimatePresence initial={false}>
+      {state.kind !== "closed" && (
+        <motion.section
+          key="publish-panel"
+          aria-label="Publish a device"
+          className="ghost-glass relative rounded-card p-5 sm:p-6"
+          initial={{ opacity: 0, y: -8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.98, transition: { duration: duration.fast, ease: ease.standard } }}
+          transition={spring.gentle}
+        >
+          <button type="button" onClick={onClose} className={cx(btnIconRound, "absolute top-3 right-3")} aria-label="Close publish panel">
+            <Icon icon={X} size={18} />
+          </button>
 
-      {state.kind === "creating" && (
-        <p className="flex items-center gap-2 text-sm text-ivory-dim">
-          <LoaderCircle className="size-4 animate-spin" aria-hidden /> Creating a pairing code…
-        </p>
-      )}
+          {state.kind === "creating" && (
+            <div className="grid gap-6 pr-12 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-8" aria-busy>
+              <Skel className="mx-auto size-52 rounded-tile md:mx-0" />
+              <div className="flex flex-col gap-3">
+                <p className="flex items-center gap-2 text-body-sm text-fg-2">
+                  <Icon icon={LoaderCircle} size={16} className="animate-spin" /> Creating a pairing code…
+                </p>
+                <div className="flex gap-1.5">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <Skel key={i} className="h-14 w-11 rounded-tile sm:h-16 sm:w-12" />
+                  ))}
+                </div>
+                <Skel className="h-4 w-3/4" />
+              </div>
+            </div>
+          )}
 
-      {state.kind === "error" && (
-        <div className="flex flex-col gap-3 pr-8">
-          <InlineError>Couldn&apos;t create a pairing code: {state.message}</InlineError>
-          <div>
-            <button type="button" className={btnGhost} onClick={onNew}>
-              <RefreshCw className="size-4" aria-hidden /> Try again
-            </button>
-          </div>
-        </div>
-      )}
+          {state.kind === "error" && (
+            <div className="flex flex-col gap-3 pr-12">
+              <InlineError>Couldn&apos;t create a pairing code: {state.message}</InlineError>
+              <div>
+                <button type="button" className={btnSecondary} onClick={onNew}>
+                  <Icon icon={RefreshCw} size={16} /> Try again
+                </button>
+              </div>
+            </div>
+          )}
 
-      {state.kind === "open" && (
-        <PairingDetails
-          key={state.pairing.pairing_id}
-          pairing={state.pairing}
-          joinUrl={state.joinUrl}
-          confirmed={state.confirmed}
-          presented={presented}
-          onNew={onNew}
-        />
+          {state.kind === "open" && (
+            <PairingDetails
+              key={state.pairing.pairing_id}
+              pairing={state.pairing}
+              joinUrl={state.joinUrl}
+              confirmed={state.confirmed}
+              presented={presented}
+              onNew={onNew}
+            />
+          )}
+        </motion.section>
       )}
-    </section>
+    </AnimatePresence>
   );
 }
 
@@ -969,11 +1134,16 @@ function PendingPairingRow({ pairing, onDone }: { pairing: PairingInfo; onDone: 
   };
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-amber/25 bg-ink-2/70 p-4">
+    <motion.li
+      className="ghost-glass flex flex-col gap-3 rounded-card p-4 shadow-card ring-1 ring-amber/25"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={spring.gentle}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate font-medium text-ivory">{pairing.label || "Unnamed connector"}</div>
-          <div className="truncate font-mono text-xs text-mute">
+          <div className="truncate font-serif text-heading text-fg">{pairing.label || "Unnamed connector"}</div>
+          <div className="truncate text-caption text-fg-3">
             {pairing.connector_kind ? humanize(pairing.connector_kind) : "unknown kind"}
           </div>
         </div>
@@ -981,26 +1151,51 @@ function PendingPairingRow({ pairing, onDone }: { pairing: PairingInfo; onDone: 
           <Dot shape="hollow" tone="amber" /> Waiting for you
         </Badge>
       </div>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-        <span className="text-mute">
-          Code <span className="font-mono tracking-[0.2em] text-ivory">{pairing.code}</span>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-tile bg-surface-2 px-3 py-2 text-body-sm">
+        <span className="text-fg-3">
+          Code <span className="font-mono font-medium tracking-[0.2em] text-fg">{pairing.code}</span>
         </span>
-        <span className="text-mute">
-          Expires in <Countdown to={pairing.expires_at} className="text-ivory-dim" expiredLabel="expired" />
+        <span className="text-fg-3">
+          Expires in{" "}
+          <span className="font-medium text-fg-2">
+            <Countdown to={pairing.expires_at} expiredLabel="expired" />
+          </span>
         </span>
       </div>
       <div className="flex gap-2">
-        <button type="button" className={cx(btnMint, "flex-1")} disabled={busy !== null} onClick={() => void act("confirm")}>
-          {busy === "confirm" ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
+        <button
+          type="button"
+          className={cx(btnPrimary, "flex-1")}
+          disabled={busy !== null}
+          onClick={() => void act("confirm")}
+          aria-busy={busy === "confirm" || undefined}
+        >
+          <Icon
+            icon={busy === "confirm" ? LoaderCircle : Check}
+            size={16}
+            spring="snappy"
+            className={busy === "confirm" ? "animate-spin" : undefined}
+          />
           Confirm
         </button>
-        <button type="button" className={cx(btnGhost, "flex-1")} disabled={busy !== null} onClick={() => void act("reject")}>
-          {busy === "reject" ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <X className="size-4" aria-hidden />}
+        <button
+          type="button"
+          className={cx(btnSecondary, "flex-1")}
+          disabled={busy !== null}
+          onClick={() => void act("reject")}
+          aria-busy={busy === "reject" || undefined}
+        >
+          <Icon
+            icon={busy === "reject" ? LoaderCircle : X}
+            size={16}
+            spring="snappy"
+            className={busy === "reject" ? "animate-spin" : undefined}
+          />
           Reject
         </button>
       </div>
       {error && <InlineError>{error}</InlineError>}
-    </li>
+    </motion.li>
   );
 }
 
@@ -1016,46 +1211,75 @@ const LEDGER_KIND_LABEL: Record<LedgerEntry["kind"], string> = {
   compensation: "Compensation",
 };
 
-function LedgerPanel({ ledger, fallbackBalance }: { ledger: LedgerResponse | null; fallbackBalance: number | null }) {
+function LedgerPanel({
+  ledger,
+  fallbackBalance,
+  loading,
+}: {
+  ledger: LedgerResponse | null;
+  fallbackBalance: number | null;
+  /** First load, before the coordinator has answered: show skeletons, not "empty". */
+  loading?: boolean;
+}) {
   const balance = ledger?.balance_cents ?? fallbackBalance;
   const entries = useMemo(
     () => (ledger ? [...ledger.entries].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)) : []),
     [ledger],
   );
   return (
-    <div className="ghost-glass rounded-2xl p-5">
+    <div className="ghost-glass rounded-card p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="hud-label mb-1">Balance</div>
-          <div className="font-mono text-3xl text-ivory tabular-nums">{balance != null ? formatCents(balance) : "—"}</div>
+        <div className="min-w-0">
+          <div className={cx(labelCls, "mb-1")}>Balance</div>
+          {loading && balance == null ? (
+            <Skel className="mt-1 h-8 w-32" />
+          ) : (
+            <div className="truncate font-display text-title text-fg tabular-nums">
+              {balance != null ? formatCents(balance) : "—"}
+            </div>
+          )}
         </div>
-        <Badge tone="violet">
-          <Wallet className="size-3.5" aria-hidden /> Test funds
+        <Badge tone="ivory">
+          <Icon icon={Wallet} size={14} /> Test funds
         </Badge>
       </div>
-      <p className="mt-3 rounded-lg border border-line bg-ink-2/70 px-3 py-2 text-xs text-ivory-dim">
-        {ledger?.label || DEV_LEDGER_LABEL}
-      </p>
-      <div className="hud-label mt-5 mb-2">Entries</div>
-      {entries.length === 0 ? (
-        <p className="text-sm text-mute">No ledger entries yet.</p>
+      <p className="mt-4 rounded-tile bg-surface-2 px-3 py-2.5 text-caption text-fg-2">{ledger?.label || DEV_LEDGER_LABEL}</p>
+      <div className="mt-5 mb-1 text-body-sm font-medium text-fg">Entries</div>
+      {loading && entries.length === 0 ? (
+        <ul aria-hidden className="divide-y divide-line">
+          {[0, 1, 2].map((i) => (
+            <li key={i} className="flex items-center justify-between gap-3 py-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <Skel className="h-3.5 w-28" />
+                <Skel className="h-3 w-40 max-w-full" />
+              </div>
+              <Skel className="h-3.5 w-14" />
+            </li>
+          ))}
+        </ul>
+      ) : entries.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <Illustration name="wallet" size={48} fallback={Wallet} />
+          <p className="font-serif text-heading text-fg">No ledger entries yet</p>
+          <p className="text-body-sm text-fg-3">Test grants and lease income will show up here.</p>
+        </div>
       ) : (
         <ul className="ghost-scroll -mx-1 max-h-96 divide-y divide-line overflow-y-auto px-1">
           {entries.map((e) => (
-            <li key={e.entry_id} className="flex items-start justify-between gap-3 py-2.5">
+            <li key={e.entry_id} className="flex items-start justify-between gap-3 py-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm text-ivory">
+                <div className="flex flex-wrap items-baseline gap-x-2 text-body-sm font-medium text-fg">
                   <span>{LEDGER_KIND_LABEL[e.kind] ?? humanize(e.kind)}</span>
-                  <span className="font-mono text-[11px] text-mute">{formatTime(e.created_at)}</span>
+                  <span className="text-caption font-normal text-fg-3 tabular-nums">{formatTime(e.created_at)}</span>
                 </div>
-                <div className="truncate text-xs text-mute" title={e.label}>
+                <div className="truncate text-caption text-fg-3" title={e.label}>
                   {e.label}
                 </div>
               </div>
               <div
                 className={cx(
-                  "shrink-0 font-mono text-sm tabular-nums",
-                  e.amount_cents > 0 ? "text-mint" : e.amount_cents < 0 ? "text-ivory-dim" : "text-mute",
+                  "shrink-0 text-body-sm font-medium tabular-nums",
+                  e.amount_cents > 0 ? "text-mint" : e.amount_cents < 0 ? "text-fg-2" : "text-fg-3",
                 )}
               >
                 {e.amount_cents > 0 ? "+" : ""}
@@ -1345,54 +1569,72 @@ export default function OwnerConsolePage() {
         ? { label: "Reconnecting", tone: "amber" as Tone, shape: "half" as Shape }
         : { label: "Connecting", tone: "mute" as Tone, shape: "hollow" as Shape };
 
-  return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      {/* Header */}
-      <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="flex items-center gap-2.5">
-              <Ghost className="size-7 text-ivory" aria-hidden />
-              <span className="font-display text-2xl font-extrabold tracking-[0.18em] text-ivory">GHOST</span>
-            </span>
-            <span className="hud-label rounded-full border border-line px-2.5 py-1">Owner console</span>
-          </div>
-          <div className="mt-4 flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-lg text-ivory">
-              {me ? me.display_name : reach === "down" ? "Not connected" : "Connecting…"}
-            </span>
-            {me && (
-              <span className="max-w-xs truncate font-mono text-xs text-mute" title={me.principal_id}>
-                {me.principal_id}
-              </span>
-            )}
-          </div>
-        </div>
+  const connecting = reach === "loading" && !me;
+  const publishLabel = publish.kind === "open" ? "New pairing code" : "Publish device";
+  const publishDisabled = publish.kind === "creating" || reach === "down";
 
-        <div className="flex flex-wrap items-center gap-3">
-          <span className={cx("inline-flex items-center gap-1.5 text-xs", TONE_TEXT[streamMeta.tone])}>
+  return (
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-4 pb-14 sm:px-6 sm:pt-6 lg:px-8 lg:pb-20">
+      {/* Header */}
+      <header className="flex flex-col gap-6">
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/" className={cx(btnSecondaryBare, "pr-4 pl-3")}>
+            <Icon icon={ArrowLeft} size={16} />
+            Back to Polty
+          </Link>
+          <span
+            className={cx(
+              "ghost-chip inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-caption font-medium",
+              TONE_TEXT[streamMeta.tone],
+            )}
+          >
             <Dot shape={streamMeta.shape} tone={streamMeta.tone} />
             {streamMeta.label}
           </span>
-          <div className="flex items-baseline gap-2 rounded-xl border border-line bg-ink-2 px-3 py-2">
-            <span className="hud-label">Test balance</span>
-            <span className="font-mono text-sm text-ivory tabular-nums">{balance != null ? formatCents(balance) : "—"}</span>
+        </div>
+
+        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <Illustration name="polty" size={64} fallback={Ghost} priority />
+            <div className="min-w-0">
+              <div className="hud-label mb-1">GHOST</div>
+              <h1 className="font-display text-title text-fg">Owner console</h1>
+              <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2.5">
+                <span className="max-w-full min-w-0 truncate text-body text-fg-2">
+                  {me ? me.display_name : reach === "down" ? "Not connected" : "Connecting…"}
+                </span>
+                {me && (
+                  <span className="max-w-full min-w-0 truncate font-mono text-label text-fg-3 sm:max-w-xs" title={me.principal_id}>
+                    {me.principal_id}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            className={btnIvory}
-            onClick={() => void startPublish()}
-            disabled={publish.kind === "creating" || reach === "down"}
-          >
-            {publish.kind === "creating" ? (
-              <LoaderCircle className="size-4 animate-spin" aria-hidden />
-            ) : publish.kind === "open" ? (
-              <QrCode className="size-4" aria-hidden />
-            ) : (
-              <Plus className="size-4" aria-hidden />
-            )}
-            {publish.kind === "open" ? "New pairing code" : "Publish device"}
-          </button>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="ghost-chip inline-flex h-10 items-center gap-2 rounded-full px-4">
+              <span className="text-caption text-fg-3">Test balance</span>
+              <span className="text-body-sm font-medium text-fg tabular-nums">
+                {balance != null ? formatCents(balance) : "—"}
+              </span>
+            </div>
+            <button
+              type="button"
+              className={btnPrimary}
+              onClick={() => void startPublish()}
+              disabled={publishDisabled}
+              aria-busy={publish.kind === "creating" || undefined}
+            >
+              <Icon
+                icon={publish.kind === "creating" ? LoaderCircle : publish.kind === "open" ? QrCode : Plus}
+                size={16}
+                spring="snappy"
+                className={publish.kind === "creating" ? "animate-spin" : undefined}
+              />
+              {publishLabel}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1400,27 +1642,35 @@ export default function OwnerConsolePage() {
       {reach === "down" && (
         <div
           role="alert"
-          className="flex flex-col gap-3 rounded-2xl border border-coral/35 bg-coral/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+          className="ghost-glass flex flex-col gap-4 rounded-card p-4 shadow-card ring-1 ring-coral/30 sm:flex-row sm:items-center sm:justify-between sm:p-5"
         >
-          <div className="flex items-start gap-3">
-            <ServerCrash className="mt-0.5 size-5 shrink-0 text-coral" aria-hidden />
-            <div>
-              <div className="font-medium text-coral">Coordinator unreachable</div>
-              <div className="text-sm text-ivory-dim">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-coral/10 text-coral">
+              <Icon icon={ServerCrash} size={20} />
+            </span>
+            <div className="min-w-0">
+              <div className="text-body font-medium text-coral">Coordinator unreachable</div>
+              <div className="text-body-sm text-fg-2">
                 {reachError && reachError !== "Coordinator unreachable" ? `${reachError}. ` : ""}
                 Retrying every {POLL_MS / 1000} s{me ? " — showing the last known state." : "."}
               </div>
             </div>
           </div>
-          <button type="button" className={btnGhost} onClick={() => void retryNow()} disabled={retrying}>
-            <RefreshCw className={cx("size-4", retrying && "animate-spin")} aria-hidden />
+          <button
+            type="button"
+            className={cx(btnSecondary, "self-start sm:self-auto")}
+            onClick={() => void retryNow()}
+            disabled={retrying}
+            aria-busy={retrying || undefined}
+          >
+            <Icon icon={RefreshCw} size={16} className={retrying ? "animate-spin" : undefined} />
             Retry now
           </button>
         </div>
       )}
-      {reach === "loading" && !me && (
-        <p className="flex items-center gap-2 text-sm text-mute">
-          <LoaderCircle className="size-4 animate-spin" aria-hidden /> Connecting to the coordinator…
+      {connecting && (
+        <p className="-mt-2 flex items-center gap-2 px-1 text-body-sm text-fg-3">
+          <Icon icon={LoaderCircle} size={16} className="animate-spin" /> Connecting to the coordinator…
         </p>
       )}
 
@@ -1431,13 +1681,21 @@ export default function OwnerConsolePage() {
         onNew={() => void startPublish()}
       />
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
+      <div className="grid gap-x-8 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
         {/* Pending devices — first on mobile, top-right on desktop */}
         <section aria-labelledby="pending-h" className="min-w-0 lg:col-start-2 lg:row-start-1">
           <SectionHeader id="pending-h" title="Pending devices" count={pendingPairings.length} hint="Confirm before it goes live" />
-          {errors.pairings && <div className="mb-3"><InlineError>{errors.pairings}</InlineError></div>}
-          {pendingPairings.length === 0 ? (
-            <EmptyState>No devices waiting for confirmation. Use “Publish device” to pair one.</EmptyState>
+          {errors.pairings && (
+            <div className="mb-3 px-1">
+              <InlineError>{errors.pairings}</InlineError>
+            </div>
+          )}
+          {connecting ? (
+            <PendingSkeleton />
+          ) : pendingPairings.length === 0 ? (
+            <EmptyState illustration="phone" fallback={Smartphone} size={48} title="Nothing to confirm">
+              No devices waiting for confirmation. Use “Publish device” to pair one.
+            </EmptyState>
           ) : (
             <ul className="flex flex-col gap-3">
               {pendingPairings.map((p) => (
@@ -1450,31 +1708,43 @@ export default function OwnerConsolePage() {
         {/* Active leases */}
         <section aria-labelledby="leases-h" className="min-w-0 lg:col-start-1 lg:row-start-1">
           <SectionHeader id="leases-h" title="Active leases" count={leases.length} hint="Visitors using your devices" />
-          {errors.leases && <div className="mb-3"><InlineError>{errors.leases}</InlineError></div>}
-          {leases.length === 0 && ended.length === 0 ? (
-            <EmptyState>No one is using your devices right now.</EmptyState>
+          {errors.leases && (
+            <div className="mb-3 px-1">
+              <InlineError>{errors.leases}</InlineError>
+            </div>
+          )}
+          {connecting ? (
+            <div className={CARD_GRID}>
+              <CardSkeleton />
+            </div>
+          ) : leases.length === 0 && ended.length === 0 ? (
+            <EmptyState illustration="key" fallback={KeyRound} title="No active leases">
+              No one is using your devices right now.
+            </EmptyState>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {leases.map((l) => (
-                <LeaseCard
-                  key={l.lease_id}
-                  lease={l}
-                  deviceNames={deviceNames}
-                  action={leaseActions[l.lease_id] ?? NO_ACTION}
-                  onApprove={() => void approve(l)}
-                  onRevoke={() => void revoke(l)}
-                />
+            <div className={CARD_GRID}>
+              {leases.map((l, i) => (
+                <Appear key={l.lease_id} index={i}>
+                  <LeaseCard
+                    lease={l}
+                    deviceNames={deviceNames}
+                    action={leaseActions[l.lease_id] ?? NO_ACTION}
+                    onApprove={() => void approve(l)}
+                    onRevoke={() => void revoke(l)}
+                  />
+                </Appear>
               ))}
-              {ended.map((l) => (
-                <LeaseCard
-                  key={`ended-${l.lease_id}`}
-                  lease={l}
-                  deviceNames={deviceNames}
-                  ended
-                  action={NO_ACTION}
-                  onApprove={() => {}}
-                  onRevoke={() => {}}
-                />
+              {ended.map((l, i) => (
+                <Appear key={`ended-${l.lease_id}`} index={leases.length + i}>
+                  <LeaseCard
+                    lease={l}
+                    deviceNames={deviceNames}
+                    ended
+                    action={NO_ACTION}
+                    onApprove={() => {}}
+                    onRevoke={() => {}}
+                  />
+                </Appear>
               ))}
             </div>
           )}
@@ -1488,16 +1758,41 @@ export default function OwnerConsolePage() {
             count={devices.length}
             hint={`${devices.filter((d) => d.online).length} online`}
           />
-          {errors.devices && <div className="mb-3"><InlineError>{errors.devices}</InlineError></div>}
-          {sortedDevices.length === 0 ? (
-            <EmptyState>
-              You haven&apos;t published any devices yet. Press “Publish device” and scan the code with the phone or
-              computer that holds the hardware.
+          {errors.devices && (
+            <div className="mb-3 px-1">
+              <InlineError>{errors.devices}</InlineError>
+            </div>
+          )}
+          {connecting ? (
+            <div className={CARD_GRID}>
+              <CardSkeleton tall />
+              <CardSkeleton tall />
+            </div>
+          ) : sortedDevices.length === 0 ? (
+            <EmptyState
+              illustration="satellite"
+              fallback={SatelliteDish}
+              title="No devices yet"
+              action={
+                <button type="button" className={btnPrimary} onClick={() => void startPublish()} disabled={publishDisabled}>
+                  <Icon
+                    icon={publish.kind === "creating" ? LoaderCircle : publish.kind === "open" ? QrCode : Plus}
+                    size={16}
+                    spring="snappy"
+                    className={publish.kind === "creating" ? "animate-spin" : undefined}
+                  />
+                  {publishLabel}
+                </button>
+              }
+            >
+              Publish one and scan the code with the phone or computer that holds the hardware.
             </EmptyState>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {sortedDevices.map((d) => (
-                <DeviceCard key={d.device_id} device={d} onUpdated={onDeviceUpdated} />
+            <div className={CARD_GRID}>
+              {sortedDevices.map((d, i) => (
+                <Appear key={d.device_id} index={i}>
+                  <DeviceCard device={d} onUpdated={onDeviceUpdated} />
+                </Appear>
               ))}
             </div>
           )}
@@ -1506,10 +1801,15 @@ export default function OwnerConsolePage() {
         {/* Ledger */}
         <section aria-labelledby="ledger-h" className="min-w-0 lg:col-start-2 lg:row-start-2">
           <SectionHeader id="ledger-h" title="Ledger" hint="Test funds" />
-          {errors.ledger && <div className="mb-3"><InlineError>{errors.ledger}</InlineError></div>}
-          <LedgerPanel ledger={ledger} fallbackBalance={me?.balance_cents ?? null} />
+          {errors.ledger && (
+            <div className="mb-3 px-1">
+              <InlineError>{errors.ledger}</InlineError>
+            </div>
+          )}
+          <LedgerPanel ledger={ledger} fallbackBalance={me?.balance_cents ?? null} loading={connecting} />
         </section>
       </div>
     </main>
   );
 }
+

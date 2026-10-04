@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Bluetooth, Mic, RefreshCw, Smartphone, Tv } from "lucide-react";
+import { ArrowLeft, Bluetooth, LoaderCircle, Mic, RefreshCw, Smartphone, Tv } from "lucide";
+import { Icon } from "@/components/ui/Icon";
+import { Illustration } from "@/components/ui/Illustration";
 import ConnectHardwareWidget from "@/components/canvas/widgets/ConnectHardwareWidget";
 import PairPhoneWidget from "@/components/canvas/widgets/PairPhoneWidget";
 import NetworkScanWidget from "@/components/canvas/widgets/NetworkScanWidget";
@@ -56,57 +58,122 @@ export default function DevicesPage() {
   const widget = { focused: false, report: () => {}, emit: (text: string) => { setNotice(text); void refresh(); }, update: () => {} };
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 text-ivory sm:px-8">
-      <Link href="/" className="inline-flex items-center gap-2 text-sm text-ivory-dim"><ArrowLeft size={16} /> Back to GHOST</Link>
+    <main className="mx-auto min-h-dvh max-w-6xl px-4 pb-16 pt-[max(24px,env(safe-area-inset-top))] text-fg sm:px-8 sm:pt-10">
+      <Link href="/" className="ghost-chip inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-caption font-medium text-fg-2 transition-colors hover:text-fg">
+        <Icon icon={ArrowLeft} size={14} /> Back to Polty
+      </Link>
       <header className="my-8 max-w-2xl">
-        <p className="hud-label text-mint">give your agent a body</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold">Connect once. Remember how.</h1>
-        <p className="mt-3 text-ivory-dim">Lend a phone, choose a microphone, or connect supported hardware. Your agent remembers how each device connects and which calls worked.</p>
+        <p className="text-caption font-medium text-mint">Give your agent a body</p>
+        <h1 className="mt-2 font-display text-display">Connect once. Remember how.</h1>
+        <p className="mt-3 text-body-lg text-fg-2">Lend a phone, choose a microphone, or connect supported hardware. Your agent remembers how each device connects and which calls worked.</p>
       </header>
-      {(error || notice) && <p role="status" className="ghost-glass mb-5 rounded-xl p-4 text-sm">{error || notice}</p>}
-      {!ready ? <p>Connecting to your device network…</p> : <>
-        <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-          <section className="ghost-glass rounded-3xl p-5">
-            <h2 className="mb-4 flex items-center gap-2 font-display text-lg"><Bluetooth size={19} /> This computer & nearby hardware</h2>
-            <ConnectHardwareWidget {...widget} id="device-setup" props={{ transport: "any" }} />
-          </section>
-          <div className="space-y-5">
-            <section className="ghost-glass rounded-3xl p-5">
-              <h2 className="flex items-center gap-2 font-display text-lg"><Smartphone size={19} /> Lend a phone</h2>
-              <p className="my-3 text-sm text-ivory-dim">Camera, microphone, screen and supported sensors. Phones need an HTTPS address they can reach.</p>
-              {phone ? <PairPhoneWidget {...widget} id="phone-setup" props={{}} /> : <button onClick={() => setPhone(true)} className="rounded-xl bg-ivory px-4 py-2 text-sm text-white">Pair a phone</button>}
-            </section>
-            <section className="ghost-glass rounded-3xl p-5">
-              <h2 className="flex items-center gap-2 font-display text-lg"><Tv size={19} /> TVs & home devices</h2>
-              <p className="my-3 text-sm text-ivory-dim">Roku TVs and other supported LAN devices need a coordinator on their network. Unknown TV protocols still need an adapter.</p>
-              {network ? <NetworkScanWidget {...widget} id="network-setup" props={{ autoScan: false }} /> : <button onClick={() => setNetwork(true)} className="rounded-xl border border-line-strong px-4 py-2 text-sm">Open network discovery</button>}
-            </section>
-          </div>
+      {(error || notice) && (
+        <p role="status" className="ghost-glass mb-5 rounded-tile p-4 text-body-sm">
+          {error || notice}
+        </p>
+      )}
+      {!ready ? (
+        <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]" aria-busy="true">
+          <div className="ghost-skeleton h-72 rounded-card" />
+          <div className="ghost-skeleton h-72 rounded-card" />
         </div>
-        <section className="mt-8">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="font-display text-xl">Remembered devices</h2>
-            <button onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm"><RefreshCw size={14} /> Refresh</button>
+      ) : (
+        <>
+          <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+            <section className="ghost-glass rounded-card p-5 sm:p-6">
+              <h2 className="mb-4 flex items-center gap-2.5 font-serif text-heading">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-tint text-fg-2"><Icon icon={Bluetooth} size={16} /></span> This computer & nearby hardware
+              </h2>
+              <ConnectHardwareWidget {...widget} id="device-setup" props={{ transport: "any" }} />
+            </section>
+            <div className="space-y-5">
+              <section className="ghost-glass rounded-card p-5 sm:p-6">
+                <h2 className="flex items-center gap-2.5 font-serif text-heading">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-tint text-fg-2"><Icon icon={Smartphone} size={16} /></span> Lend a phone
+                </h2>
+                <p className="my-3 text-body-sm text-fg-2">Camera, microphone, screen and supported sensors. Phones need an HTTPS address they can reach.</p>
+                {phone ? (
+                  <PairPhoneWidget {...widget} id="phone-setup" props={{}} />
+                ) : (
+                  <button onClick={() => setPhone(true)} className="h-10 rounded-full bg-fg px-4 text-body-sm font-medium text-fg-inverse shadow-pop transition-transform active:scale-[0.97]">
+                    Pair a phone
+                  </button>
+                )}
+              </section>
+              <section className="ghost-glass rounded-card p-5 sm:p-6">
+                <h2 className="flex items-center gap-2.5 font-serif text-heading">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-tint text-fg-2"><Icon icon={Tv} size={16} /></span> TVs & home devices
+                </h2>
+                <p className="my-3 text-body-sm text-fg-2">Roku TVs and other supported LAN devices need a coordinator on their network. Unknown TV protocols still need an adapter.</p>
+                {network ? (
+                  <NetworkScanWidget {...widget} id="network-setup" props={{ autoScan: false }} />
+                ) : (
+                  <button onClick={() => setNetwork(true)} className="ghost-chip h-10 rounded-full px-4 text-body-sm font-medium text-fg transition-transform active:scale-[0.97]">
+                    Open network discovery
+                  </button>
+                )}
+              </section>
+            </div>
           </div>
-          {!memory.length && <p className="ghost-glass rounded-2xl p-5 text-sm text-ivory-dim">Connect a device to start its memory. Successful uses and reconnect instructions will appear here.</p>}
-          <div className="grid gap-4 md:grid-cols-2">
-            {memory.map((m) => <article key={m.device_id} className="ghost-glass rounded-2xl p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div><h3 className="font-semibold">{m.name}</h3><p className="mt-1 text-xs text-mute">{m.guide.input_label || m.guide.method}</p></div>
-                <span className={m.online ? "text-xs text-mint" : "text-xs text-mute"}>{m.online ? "Online" : "Offline · remembered"}</span>
+          <section className="mt-10">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="font-display text-title">Remembered devices</h2>
+              <button onClick={() => void refresh()} className="ghost-chip inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-caption font-medium text-fg-2 transition-colors hover:text-fg active:scale-[0.97]">
+                <Icon icon={RefreshCw} size={13} /> Refresh
+              </button>
+            </div>
+            {!memory.length && (
+              <div className="ghost-glass flex flex-col items-center gap-2 rounded-card px-5 py-10 text-center">
+                <Illustration name="satellite" size={56} fallback={Smartphone} />
+                <p className="mt-1 font-serif text-heading">No remembered devices yet</p>
+                <p className="max-w-md text-body-sm text-fg-3">Connect a device to start its memory. Successful uses and reconnect instructions will appear here.</p>
               </div>
-              <p className="mt-3 text-sm text-ivory-dim">{m.history.succeeded} succeeded calls · {m.history.failed} failed · {m.history.unknown} unknown</p>
-              <details className="mt-3 text-sm">
-                <summary className="cursor-pointer font-medium">How to reconnect</summary>
-                <ol className="mt-2 list-decimal space-y-1 pl-5 text-ivory-dim">{m.guide.steps.map((s) => <li key={s}>{s}</li>)}</ol>
-                {m.guide.limitations.map((s) => <p key={s} className="mt-2 text-xs text-mute">{s}</p>)}
-              </details>
-              {m.capabilities.some((c) => c.ref.endsWith("/audio.level")) && <button disabled={!m.online || testing !== null} onClick={() => void testMicrophone(m.device_id)} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-line-strong px-3 py-2 text-sm disabled:opacity-40"><Mic size={14} />{testing === m.device_id ? "Measuring…" : "Test sound level"}</button>}
-            </article>)}
-          </div>
-          <p className="mt-4 text-xs text-mute">Remembering a device preserves instructions and evidence. Each use still checks current access and availability.</p>
-        </section>
-      </>}
+            )}
+            <div className="grid gap-4 md:grid-cols-2">
+              {memory.map((m) => (
+                <article key={m.device_id} className="ghost-glass rounded-card p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-serif text-heading">{m.name}</h3>
+                      <p className="mt-0.5 text-caption text-fg-3">{m.guide.input_label || m.guide.method}</p>
+                    </div>
+                    <span className={m.online ? "shrink-0 rounded-full bg-mint/10 px-2 py-0.5 text-label font-medium text-mint" : "shrink-0 rounded-full bg-tint px-2 py-0.5 text-label font-medium text-fg-3"}>
+                      {m.online ? "Online" : "Offline · remembered"}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-body-sm tabular-nums text-fg-2">
+                    {m.history.succeeded} succeeded calls · {m.history.failed} failed · {m.history.unknown} unknown
+                  </p>
+                  <details className="mt-3 text-body-sm">
+                    <summary className="cursor-pointer font-medium text-fg">How to reconnect</summary>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-fg-2">
+                      {m.guide.steps.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ol>
+                    {m.guide.limitations.map((s) => (
+                      <p key={s} className="mt-2 text-caption text-fg-3">
+                        {s}
+                      </p>
+                    ))}
+                  </details>
+                  {m.capabilities.some((c) => c.ref.endsWith("/audio.level")) && (
+                    <button
+                      disabled={!m.online || testing !== null}
+                      onClick={() => void testMicrophone(m.device_id)}
+                      className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-tint px-3.5 text-caption font-medium text-fg transition-transform active:scale-[0.97] disabled:opacity-40"
+                    >
+                      <Icon icon={testing === m.device_id ? LoaderCircle : Mic} size={13} spring="snappy" className={testing === m.device_id ? "animate-spin" : undefined} />
+                      {testing === m.device_id ? "Measuring…" : "Test sound level"}
+                    </button>
+                  )}
+                </article>
+              ))}
+            </div>
+            <p className="mt-4 text-caption text-fg-3">Remembering a device preserves instructions and evidence. Each use still checks current access and availability.</p>
+          </section>
+        </>
+      )}
     </main>
   );
 }

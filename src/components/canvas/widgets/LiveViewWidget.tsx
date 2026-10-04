@@ -10,7 +10,7 @@
  */
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, CameraOff, Crosshair, Loader2, RotateCcw, ScanSearch } from "lucide-react";
+import { CameraOff, Crosshair, LoaderCircle, RotateCcw, ScanSearch, TriangleAlert } from "lucide";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LiveSource } from "@/lib/ghost/contracts";
 import { createDetector, type Detector } from "@/lib/vision/detector";
@@ -33,6 +33,8 @@ import { attachSource, sourceLabel, type AttachedSource, SourceError } from "@/l
 import { Tracker, type Box, type Track } from "@/lib/vision/tracker";
 import { fromTile, mergeDetections, planTiles, type Tile } from "@/lib/vision/tiles";
 import type { Detection, DetectorBackend } from "@/lib/vision/types";
+import { Icon } from "@/components/ui/Icon";
+import { duration, ease } from "@/components/ui/motion";
 import type { WidgetComponentProps } from "../types";
 
 export interface LiveViewProps {
@@ -513,14 +515,30 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
   const failed = phase === "unavailable" || phase === "permission" || phase === "unsupported" || phase === "error";
   const modelName = getModel(modelId).name;
   const total = stats.counts.reduce((n, [, v]) => n + v, 0);
-  const statusTone = modelPhase !== "ready" ? "text-mute" : stats.status === "locked" ? "text-mint" : stats.status === "holding" ? "text-coral" : stats.status === "searching" ? "text-amber" : "text-mute";
+  const statusTone = modelPhase !== "ready" ? "text-fg-3" : stats.status === "locked" ? "text-mint" : stats.status === "holding" ? "text-coral" : stats.status === "searching" ? "text-amber" : "text-fg-3";
+
+  const chip = "rounded-full bg-page/65 px-2 py-0.5 backdrop-blur";
+  const statusText =
+    modelPhase !== "ready"
+      ? modelPhase === "error"
+        ? "Tracking off"
+        : "Standby · model loading"
+      : stats.status === "locked" && stats.target
+        ? `Locked #${stats.target.id} ${stats.target.label}`
+        : stats.status === "holding"
+          ? "Target occluded · holding"
+          : stats.status === "searching"
+            ? classes
+              ? `Searching · ${classes.join(" / ")}`
+              : "Searching"
+            : "Tracking";
 
   return (
     <div
       ref={wrapRef}
       className={clsx(
-        "ghost-screen relative w-full overflow-hidden rounded-2xl border bg-ink shadow-[0_0_0_1px_rgb(255_255_255/0.6),0_12px_32px_-16px_rgb(15_23_42/0.5)] select-none",
-        focused ? "border-mint/40" : "border-line",
+        "ghost-screen relative w-full select-none overflow-hidden rounded-tile bg-page shadow-card ring-1 transition-shadow duration-300 ease-standard",
+        focused ? "ring-mint/50" : "ring-line",
       )}
       style={{ aspectRatio: String(aspect), maxHeight: "72vh" }}
     >
@@ -534,27 +552,27 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
       />
 
       {/* top strip */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 bg-gradient-to-b from-ink/85 via-ink/40 to-transparent px-3 pb-6 pt-2.5">
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 bg-linear-to-b from-page/85 via-page/40 to-transparent px-3 pb-8 pt-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="relative flex h-2 w-2 shrink-0">
-            {live && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-coral opacity-60" />}
-            <span className={clsx("relative inline-flex h-2 w-2 rounded-full", live ? "bg-coral" : failed ? "bg-mute" : "bg-amber")} />
+          <span className={clsx("inline-flex shrink-0 items-center gap-1.5", chip)}>
+            <span className="relative flex h-2 w-2 shrink-0">
+              {live && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-coral opacity-60" />}
+              <span className={clsx("relative inline-flex h-2 w-2 rounded-full", live ? "bg-coral" : failed ? "bg-fg-3" : "bg-amber")} />
+            </span>
+            <span className={clsx("text-label font-semibold", live ? "text-fg" : "text-fg-3")}>{live ? "Live" : failed ? "Offline" : "Connecting"}</span>
           </span>
-          <span className={clsx("font-mono text-[10px] font-semibold tracking-[0.18em]", live ? "text-ivory" : "text-mute")}>
-            {live ? "LIVE" : failed ? "OFFLINE" : "CONNECTING"}
-          </span>
-          <span className="truncate font-mono text-[11px] text-ivory/90">{title}</span>
-          {source && <span className="hud-label hidden shrink-0 sm:inline">{sourceLabel(source)}</span>}
+          <span className="truncate text-body-sm font-medium text-fg">{title}</span>
+          {source && <span className="hidden shrink-0 text-caption text-fg-3 sm:inline">{sourceLabel(source)}</span>}
         </div>
         {trackOn && (
-          <div className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tracking-[0.12em] text-ivory-dim">
-            <span className="rounded border border-line bg-ink/60 px-1.5 py-0.5 text-violet">{modelName}</span>
-            <span className="rounded border border-line bg-ink/60 px-1.5 py-0.5 uppercase">
-              {modelPhase === "ready" ? stats.backend : modelPhase === "loading" ? "loading" : modelPhase === "error" ? "no model" : "—"}
+          <div className="flex shrink-0 items-center gap-1 text-label tabular-nums text-fg-2">
+            <span className={clsx("hidden text-violet sm:inline", chip)}>{modelName}</span>
+            <span className={chip}>
+              {modelPhase === "ready" ? stats.backend.toUpperCase() : modelPhase === "loading" ? "Loading" : modelPhase === "error" ? "No model" : "—"}
             </span>
-            <span className="rounded border border-line bg-ink/60 px-1.5 py-0.5 tabular-nums">
-              {Math.round(stats.fps)} FPS
-              {modelPhase === "ready" && <span className="text-mute"> · DET {stats.detFps.toFixed(1)}</span>}
+            <span className={chip}>
+              {Math.round(stats.fps)} fps
+              {modelPhase === "ready" && <span className="text-fg-3"> · det {stats.detFps.toFixed(1)}</span>}
             </span>
           </div>
         )}
@@ -562,37 +580,19 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
 
       {/* bottom-left: lock status + counts */}
       {trackOn && live && (
-        <div className="pointer-events-none absolute bottom-3 left-3 flex max-w-[64%] flex-col gap-1.5">
-          <div className={clsx("flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em]", statusTone)}>
-            {stats.status === "locked" ? <Crosshair className="h-3 w-3" /> : <ScanSearch className="h-3 w-3" />}
-            <span>
-              {modelPhase !== "ready"
-                ? modelPhase === "error"
-                  ? "TRACKING OFF"
-                  : "STANDBY · MODEL LOADING"
-                : stats.status === "locked" && stats.target
-                ? `LOCKED #${stats.target.id} ${stats.target.label.toUpperCase()}`
-                : stats.status === "holding"
-                  ? "TARGET OCCLUDED · HOLDING"
-                  : stats.status === "searching"
-                    ? classes
-                      ? `SEARCHING · ${classes.join(" / ").toUpperCase()}`
-                      : "SEARCHING"
-                    : "TRACKING"}
-            </span>
-            {stats.zoom > 1.05 && <span className="text-ivory-dim">· {stats.zoom.toFixed(1)}×</span>}
+        <div className="pointer-events-none absolute bottom-3 left-3 flex max-w-[64%] flex-col items-start gap-1.5">
+          <div className={clsx("flex max-w-full items-center gap-1.5 text-caption font-medium", chip, "py-1", statusTone)}>
+            <Icon icon={stats.status === "locked" ? Crosshair : ScanSearch} size={14} spring="snappy" className="shrink-0" />
+            <span className="truncate">{statusText}</span>
+            {stats.zoom > 1.05 && <span className="shrink-0 tabular-nums text-fg-2">· {stats.zoom.toFixed(1)}×</span>}
           </div>
           <div className="flex flex-wrap gap-1">
-            <span className="rounded bg-ink/70 px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-[0.1em] text-ivory">{total} OBJ</span>
+            <span className={clsx("text-label tabular-nums text-fg", chip)}>
+              {total} {total === 1 ? "object" : "objects"}
+            </span>
             {stats.counts.slice(0, 6).map(([label, n]) => (
-              <span
-                key={label}
-                className={clsx(
-                  "rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-[0.1em]",
-                  !classes || classes.includes(label) ? "bg-ink/70 text-ivory-dim" : "bg-ink/50 text-mute",
-                )}
-              >
-                {label.toUpperCase()} {n}
+              <span key={label} className={clsx("text-label tabular-nums", chip, !classes || classes.includes(label) ? "text-fg-2" : "text-fg-3")}>
+                {label} {n}
               </span>
             ))}
           </div>
@@ -606,23 +606,24 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-line bg-ink/80 px-3 py-1.5 backdrop-blur"
+            transition={{ duration: duration.base, ease: ease.standard }}
+            className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-page/80 px-3 py-1.5 shadow-pop backdrop-blur"
           >
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-violet" />
-            <span className="font-mono text-[10px] tracking-[0.14em] text-ivory-dim">
-              LOADING MODEL… {modelProgress > 0 && modelProgress < 1 ? `${Math.round(modelProgress * 100)}%` : modelProgress >= 1 ? "COMPILING" : ""}
+            <Icon icon={LoaderCircle} size={14} className="shrink-0 animate-spin text-violet" />
+            <span className="whitespace-nowrap text-caption tabular-nums text-fg-2">
+              Loading model… {modelProgress > 0 && modelProgress < 1 ? `${Math.round(modelProgress * 100)}%` : modelProgress >= 1 ? "compiling" : ""}
             </span>
-            <span className="h-1 w-16 overflow-hidden rounded-full bg-ink-4">
-              <span className="block h-full bg-violet transition-[width]" style={{ width: `${Math.round(modelProgress * 100)}%` }} />
+            <span className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-tint">
+              <span className="block h-full rounded-full bg-violet transition-[width] duration-200 ease-standard" style={{ width: `${Math.round(modelProgress * 100)}%` }} />
             </span>
           </motion.div>
         )}
       </AnimatePresence>
 
       {trackOn && modelPhase === "error" && !failed && (
-        <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[80%] -translate-x-1/2 items-center gap-2 rounded-full border border-coral/30 bg-ink/85 px-3 py-1.5">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-coral" />
-          <span className="truncate font-mono text-[10px] tracking-[0.1em] text-ivory-dim">Tracking unavailable: {modelError}</span>
+        <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[80%] -translate-x-1/2 items-center gap-2 rounded-full bg-page/85 px-3 py-1.5 shadow-pop backdrop-blur">
+          <Icon icon={TriangleAlert} size={14} className="shrink-0 text-coral" />
+          <span className="truncate text-caption text-fg-2">Tracking unavailable: {modelError}</span>
         </div>
       )}
 
@@ -630,26 +631,26 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
       {phase === "connecting" && stats.frame.w === 0 && (
         <div className="absolute inset-0 grid place-items-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="relative h-12 w-12">
-              <span className="absolute inset-0 rounded-full border border-amber/40" />
-              <span className="absolute inset-0 animate-spin rounded-full border-t-2 border-amber" />
+            <div className="relative h-10 w-10">
+              <span className="absolute inset-0 rounded-full border-2 border-amber/25" />
+              <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-amber" />
             </div>
-            <span className="hud-label">{source?.kind === "local_camera" ? "Waiting for camera…" : "Connecting to stream…"}</span>
+            <span className="text-body-sm text-fg-2">{source?.kind === "local_camera" ? "Waiting for camera…" : "Connecting to stream…"}</span>
           </div>
         </div>
       )}
 
       {/* failures */}
       {failed && (
-        <div className="absolute inset-0 grid place-items-center bg-ink/85 backdrop-blur-sm">
-          <div className="flex max-w-sm flex-col items-center gap-3 px-6 text-center">
-            <span className="grid h-11 w-11 place-items-center rounded-full border border-coral/40 bg-coral/10 text-coral">
-              {phase === "permission" ? <CameraOff className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+        <div className="absolute inset-0 grid place-items-center bg-page/85 backdrop-blur-sm">
+          <div className="flex max-w-sm flex-col items-center gap-1.5 px-6 text-center">
+            <span className="mb-1.5 hidden h-11 w-11 place-items-center rounded-full bg-coral/15 text-coral sm:grid">
+              <Icon icon={phase === "permission" ? CameraOff : TriangleAlert} size={20} spring="snappy" />
             </span>
-            <div className="font-mono text-[11px] font-semibold tracking-[0.16em] text-coral">
-              {phase === "permission" ? "CAMERA PERMISSION DENIED" : phase === "unsupported" ? "NOT SUPPORTED HERE" : "STREAM UNAVAILABLE"}
-            </div>
-            <p className="text-[12.5px] leading-relaxed text-ivory-dim">
+            <p className="font-serif text-heading text-coral">
+              {phase === "permission" ? "Camera permission denied" : phase === "unsupported" ? "Not supported here" : "Stream unavailable"}
+            </p>
+            <p className="text-body-sm text-fg-2">
               {phase === "permission"
                 ? "Allow camera access for this site in the browser's address bar, then retry."
                 : (errorText ?? "The operator's stream did not respond.")}
@@ -657,9 +658,9 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
             <button
               type="button"
               onClick={() => setRetry((n) => n + 1)}
-              className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3 py-1 font-mono text-[10px] tracking-[0.14em] text-ivory transition hover:border-mint/50 hover:text-mint"
+              className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-full bg-fg px-4 text-body-sm font-medium text-fg-inverse transition-opacity duration-150 ease-standard hover:opacity-90"
             >
-              <RotateCcw className="h-3 w-3" /> RETRY
+              <Icon icon={RotateCcw} size={15} /> Retry
             </button>
           </div>
         </div>
