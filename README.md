@@ -62,7 +62,7 @@ flowchart LR
     G -- WSS --> PH[Phone /join<br/>camera · mic · haptics]
     G -- WSS --> PI[Raspberry Pi<br/>servo · camera]
     G --> A[In-process adapters<br/>Caltrans · NOAA · LAN · Kernel]
-    P --> C[Generative canvas<br/>live view + real-time detector<br/>(D-FINE-N · YOLOv10n)]
+    P --> C[Generative canvas<br/>live view + real-time detector<br/>D-FINE-N · YOLOv10n]
 ```
 
 - `server.ts` — one Node server: Next.js UI + coordinator API (`/api/v1`) + MCP (`/mcp`) + device
