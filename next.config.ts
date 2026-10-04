@@ -17,6 +17,15 @@ const publicHost = (() => {
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Deploy the UI independently while the live device coordinator owns its sockets.
+  async rewrites() {
+    const coordinator = process.env.GHOST_COORDINATOR_ORIGIN?.replace(/\/+$/, "");
+    return coordinator ? [
+      { source: "/api/v1/:path*", destination: `${coordinator}/api/v1/:path*` },
+      { source: "/mcp", destination: `${coordinator}/mcp` },
+      { source: "/mcp/:path*", destination: `${coordinator}/mcp/:path*` },
+    ] : [];
+  },
   allowedDevOrigins: [
     ...(publicHost ? [publicHost] : []),
     "*.trycloudflare.com",
