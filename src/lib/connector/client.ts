@@ -729,6 +729,13 @@ export class GhostConnector {
   private resolveHttpUrl(u: string | undefined): string | null {
     if (!u) return null;
     try {
+      // The Vercel UI proxies uploads to its coordinator; keep browser uploads same-origin.
+      if (process.env.NEXT_PUBLIC_GHOST_PROXY_UPLOADS === "1" && typeof location !== "undefined") {
+        const upload = new URL(u, location.origin);
+        if (/^\/api\/v1\/invocations\/[^/]+\/observation$/.test(upload.pathname)) {
+          return new URL(upload.pathname + upload.search, location.origin).toString();
+        }
+      }
       const wsUrl = new URL(this.opts.url);
       const base = `${wsUrl.protocol === "wss:" ? "https:" : "http:"}//${wsUrl.host}`;
       return new URL(u, base).toString();
