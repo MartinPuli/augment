@@ -62,6 +62,11 @@ function pickMime(): string | undefined {
 
 class Listener {
   private engine: Engine | null = null;
+  private live = false;
+  private liveFailed = false;
+  private liveEnabled() {
+    return this.engine !== null && this.engine !== "webspeech" && !this.liveFailed && process.env.NEXT_PUBLIC_GHOST_LIVE_VOICE !== "0";
+  }
   private active = false;
   private mode: ListenMode = "tap";
   private onUtterance: ((text: string) => void) | null = null;
@@ -122,6 +127,22 @@ class Listener {
   }
 
   start(mode: ListenMode, onUtterance: (text: string) => void): boolean {
+    // Live mode (ElevenLabs Agent): always-on speech-to-speech with tools. Tap again to end.
+    if (this.liveEnabled()) {
+      this.stop();
+      this.live = true;
+      this.active = true;
+      void import("./convai").then(async ({ live }) => {
+        const ok = await live.start();
+        if (!ok) {
+          this.live = false;
+          this.active = false;
+          this.liveFailed = true;
+          this.start(mode, onUtterance);
+        }
+      });
+      return true;
+    }
     this.stop();
     const my = ++this.session;
     this.mode = mode;
@@ -147,6 +168,7 @@ class Listener {
 
   /** Release (push-to-talk) or second tap: send what was heard now. */
   finish() {
+    if (this.live) return this.stop();
     if (!this.active) return;
     if (this.rt) {
       this.rtFinish();
@@ -164,6 +186,10 @@ class Listener {
 
   /** Stop listening and discard anything unsent. */
   stop() {
+    if (this.live) {
+      this.live = false;
+      void import("./convai").then(({ live }) => live.stop());
+    }
     this.session++;
     this.active = false;
     this.rtClose();

@@ -15,6 +15,7 @@ import {
   Radar,
   Search,
   Workflow,
+  Timer,
   type LucideIcon,
 } from "lucide-react";
 import type { WidgetComponentProps } from "./types";
@@ -43,6 +44,14 @@ function lazy(loader: () => Promise<Record<string, unknown>>, name: string): Any
 const LiveViewWidget = lazy(() => import("./widgets/LiveViewWidget"), "LiveViewWidget");
 const PairPhoneWidget = lazy(() => import("./widgets/PairPhoneWidget"), "PairPhoneWidget");
 const ConnectHardwareWidget = lazy(() => import("./widgets/ConnectHardwareWidget"), "ConnectHardwareWidget");
+const WeatherWidget = lazy(() => import("./widgets/services/WeatherWidget"), "WeatherWidget");
+const NewsWidget = lazy(() => import("./widgets/services/NewsWidget"), "NewsWidget");
+const YouTubeWidget = lazy(() => import("./widgets/services/YouTubeWidget"), "YouTubeWidget");
+const AgendaWidget = lazy(() => import("./widgets/services/AgendaWidget"), "AgendaWidget");
+const DeparturesWidget = lazy(() => import("./widgets/services/DeparturesWidget"), "DeparturesWidget");
+const MapWidget = lazy(() => import("./widgets/services/MapWidget"), "MapWidget");
+const ListWidget = lazy(() => import("./widgets/services/ListWidget"), "ListWidget");
+const TimerWidget = lazy(() => import("./widgets/TimerWidget"), "TimerWidget");
 const NetworkScanWidget = lazy(() => import("./widgets/NetworkScanWidget"), "NetworkScanWidget");
 
 export interface WidgetEntry {
@@ -65,4 +74,12 @@ export const WIDGETS: Record<string, WidgetEntry> = {
   web_view: { component: WebViewWidget, icon: Globe, size: "lg", label: "Web view" },
   results: { component: ResultsWidget, icon: Search, size: "md", label: "Results" },
   mission: { component: MissionWidget, icon: Workflow, size: "lg", label: "Mission" },
+  timer: { component: TimerWidget, icon: Timer, size: "sm", label: "Timer" },
+  weather: { component: WeatherWidget, icon: Globe, size: "md", label: "Weather" },
+  news: { component: NewsWidget, icon: FileText, size: "md", label: "News" },
+  youtube: { component: YouTubeWidget, icon: Globe, size: "lg", label: "YouTube" },
+  agenda: { component: AgendaWidget, icon: FileText, size: "md", label: "Agenda" },
+  departures: { component: DeparturesWidget, icon: Workflow, size: "md", label: "Departures" },
+  map: { component: MapWidget, icon: Globe, size: "lg", label: "Map" },
+  list: { component: ListWidget, icon: Search, size: "md", label: "Results" },
 };

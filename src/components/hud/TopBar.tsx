@@ -55,8 +55,7 @@ export function TopBar() {
 
       <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
         <BrainToggle />
-        <Link href="/devices" className="ghost-chip grid h-9 w-9 place-items-center rounded-full text-ivory-dim transition hover:bg-white/80 hover:text-ivory" title="Connect devices" aria-label="Connect devices"><Cpu size={15} /></Link>
-        <Chip compact icon={<Cpu size={12} />} label={`${personal} ${personal === 1 ? "body" : "bodies"}`} title={`${personal} personal devices online · ${publicCount} public sources`} tone={personal ? "mint" : "mute"} />
+        <Link href="/devices" aria-label="Connect devices"><Chip compact icon={<Cpu size={12} />} label={`${personal} ${personal === 1 ? "body" : "bodies"}`} title={`Connect devices · ${personal} personal devices online · ${publicCount} public sources`} tone={personal ? "mint" : "mute"} /></Link>
         {active.length > 0 && <Chip icon={<KeyRound size={12} />} label={`${active.length} · ${Math.ceil((soonest ?? 0) / 1000)}s`} title="Active leases · time remaining" tone="mint" pulse />}
         {me && <Chip icon={<Wallet size={12} />} label={`$${(me.balance_cents / 100).toFixed(2)}`} title="Development ledger — test funds, not real money" tone="amber" />}
         <Link href="/owner" className="ghost-chip grid h-9 w-9 place-items-center rounded-full text-ivory-dim transition hover:bg-white/80 hover:text-ivory" title="Owner console" aria-label="Owner console">

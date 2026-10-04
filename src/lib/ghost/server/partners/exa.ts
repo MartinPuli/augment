@@ -102,3 +102,19 @@ export async function exaSearch(input: {
   }
   return { query: shaped.query, purpose, results };
 }
+
+
+/** Read pages (clean text) for answering questions. Text is untrusted data. */
+export async function exaRead(input: { urls?: unknown; query?: unknown; max_chars?: unknown }): Promise<{ pages: { url: string; title: string; text: string }[] }> {
+  const max = Math.min(8000, Math.max(500, Number(input.max_chars) || 4000));
+  const ex = client();
+  if (Array.isArray(input.urls) && input.urls.length) {
+    const urls = input.urls.filter((u): u is string => typeof u === "string" && /^https?:\/\//.test(u)).slice(0, 3);
+    const r = await ex.getContents(urls, { text: { maxCharacters: max } } as never);
+    return { pages: (r.results as { url: string; title?: string | null; text?: string }[]).map((x) => ({ url: x.url, title: x.title ?? "", text: (x.text ?? "").slice(0, max) })) };
+  }
+  const q = typeof input.query === "string" ? input.query.slice(0, 300) : "";
+  if (!q) return { pages: [] };
+  const r = await ex.searchAndContents(q, { numResults: 3, text: { maxCharacters: max } } as never);
+  return { pages: (r.results as { url: string; title?: string | null; text?: string }[]).map((x) => ({ url: x.url, title: x.title ?? "", text: (x.text ?? "").slice(0, max) })) };
+}

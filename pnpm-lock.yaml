@@ -21,6 +21,12 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.5.8
         version: 0.5.8
+      '@elevenlabs/client':
+        specifier: ^1.26.0
+        version: 1.26.0(@types/dom-mediacapture-record@1.0.22)
+      '@elevenlabs/react':
+        specifier: ^1.16.0
+        version: 1.16.0(@types/dom-mediacapture-record@1.0.22)(react@19.2.8)
       '@hono/node-server':
         specifier: ^2.1.3
         version: 2.1.3(hono@4.13.12)
@@ -29,16 +35,16 @@ importers:
         version: 11.2.1(next@16.3.8(@babel/core@8.0.6)(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(zone.js@0.16.3)
       '@mastra/core':
         specifier: ^1.74.0
-        version: 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+        version: 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       '@mastra/libsql':
         specifier: ^1.25.0
-        version: 1.25.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))
+        version: 1.25.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))
       '@mastra/observability':
         specifier: ^1.18.3
-        version: 1.18.3(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)
+        version: 1.18.3(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)
       '@mastra/pg':
         specifier: ^1.29.0
-        version: 1.29.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))
+        version: 1.29.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.0
         version: 1.32.0(supports-color@7.2.0)(zod@4.6.5)
@@ -66,9 +72,15 @@ importers:
       hono:
         specifier: 4.13.12
         version: 4.13.12
+      lucide:
+        specifier: 1.51.0
+        version: 1.51.0
       lucide-react:
         specifier: 1.51.0
         version: 1.51.0(@types/react@19.3.0)(react@19.2.8)
+      morphicons:
+        specifier: ^1.7.1
+        version: 1.7.1(react@19.2.8)
       motion:
         specifier: ^14.0.0
         version: 14.0.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -78,6 +90,9 @@ importers:
       next:
         specifier: 16.3.8
         version: 16.3.8(@babel/core@8.0.6)(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      node-ical:
+        specifier: ^0.27.3
+        version: 0.27.3
       onnxruntime-web:
         specifier: ^1.30.0
         version: 1.30.0
@@ -144,7 +159,7 @@ importers:
         version: 16.3.8(@typescript-eslint/parser@8.71.0(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
       mastra:
         specifier: ^1.32.1
-        version: 1.32.1(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5)
+        version: 1.32.1(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(rxjs@7.8.2)(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5)
       playwright-core:
         specifier: ^1.63.0
         version: 1.63.0
@@ -479,6 +494,9 @@ packages:
     resolution: {integrity: sha512-c+xgSWboV2pdwXP67BUWDVRHi2BO5Q3KwxyFVs7taVTY+fsK47/L51ZXQoV9rozHJDNHvJ4v4WEsI/IlxV2l2A==}
     engines: {node: ^22.18.0 || >=24.11.0}
 
+  '@bufbuild/protobuf@1.10.1':
+    resolution: {integrity: sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ==}
+
   '@clack/core@1.5.1':
     resolution: {integrity: sha512-iHTrHA8MtVuLl2TfZySmcKv1qO2PoyC9Z7pfSDozEuV5vtY3/wcOPKJXlqJ5Oq2Cx5DDGQGAMVx6HZfRRoVEbQ==}
     engines: {node: '>= 20.12.0'}
@@ -489,6 +507,17 @@ packages:
 
   '@electric-sql/pglite@0.5.8':
     resolution: {integrity: sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q==}
+
+  '@elevenlabs/client@1.26.0':
+    resolution: {integrity: sha512-2xEEVRnOUVQjILeWpBQxAaUm4o0fHPtfkGCFdtJa9/z1V4BASpBCF+8G6D7TkWdNLzR4EPZeq3e0m+7H6n6vrw==}
+
+  '@elevenlabs/react@1.16.0':
+    resolution: {integrity: sha512-zB8LuoKYWlPS3hsdZP+D9YA9YFLfKXZst3TBzxK/eWDZzMwx2BhSKYEf+20hAE2M1XCfuY6nEDYIt9nE7+EMng==}
+    peerDependencies:
+      react: '>=16.8.0'
+
+  '@elevenlabs/types@0.24.0':
+    resolution: {integrity: sha512-I+d9CG1Dtpm5MxqHsPkiIS8Hh+0g7Muj/yo27VSuZSTW8drcZvd3H94vys6LH1kHbRyL3kb6BHQKcHgPktvdsA==}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -1046,6 +1075,12 @@ packages:
     resolution: {integrity: sha512-4/0CvEdhi6+KjMxMaVbFM2n2Z44escBRoEYpR+gZg64DdetzGnYm8mcNLcoySaDJZNaBd6wz5DNdgRmcI4hXcg==}
     cpu: [x64]
     os: [win32]
+
+  '@livekit/mutex@1.1.1':
+    resolution: {integrity: sha512-EsshAucklmpuUAfkABPxJNhzj9v2sG7JuzFDL4ML1oJQSV14sqrpTYnsaOudMAw9yOaW53NU3QQTlUQoRs4czw==}
+
+  '@livekit/protocol@1.50.4':
+    resolution: {integrity: sha512-L1uggNQAqyY21smQY8AllyOYbcv9Me9TaxwuLytL1R8ck9nbYPmQLNwEDi3pOFGAMa5F8I2nUi2Jc59W5awxlA==}
 
   '@lukeed/csprng@1.1.0':
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
@@ -2537,6 +2572,9 @@ packages:
 
   '@types/debug@4.1.13':
     resolution: {integrity: sha512-KSVgmQmzMwPlmtljOomayoR89W4FynCAi3E8PPs7vmDVPe84hT+vGPKkJfThkmXs0x0jAaa9U8uW8bbfyS2fWw==}
+
+  '@types/dom-mediacapture-record@1.0.22':
+    resolution: {integrity: sha512-mUMZLK3NvwRLcAAT9qmcK+9p7tpU2FHdDsntR3YI4+GY88XrgG4XiE7u1Q2LAN2/FZOz/tdMDC3GQCR4T8nFuw==}
 
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
@@ -4244,6 +4282,11 @@ packages:
     resolution: {integrity: sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==}
     engines: {node: '>= 12.0.0'}
 
+  livekit-client@2.22.3:
+    resolution: {integrity: sha512-jw9zBKXY5Gtr5MZ7vEON3QhMNccuDvYHck1PFSyG1aaateQPqgKZFBMgZkFZaXHIf9RV4MDW5xpTK2b/+qbwOg==}
+    peerDependencies:
+      '@types/dom-mediacapture-record': ^1
+
   local-pkg@1.2.1:
     resolution: {integrity: sha512-++gUqRDEvcnN6Zhqrr+y/CkVEHhlrR96vZn3nZZPYzMcBUyBtTKzB9NadClFIsIVSsu+3i9tfk/erqy9kAmt7Q==}
     engines: {node: '>=14'}
@@ -4254,6 +4297,10 @@ packages:
 
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
+
+  loglevel@1.9.2:
+    resolution: {integrity: sha512-HgMmCqIJSAKqo68l0rS2AanEWfkxaZ5wNiEFb5ggm08lDs9Xl2KxBlX3PTcaD2chBM1gXAYf491/M2Rv8Jwayg==}
+    engines: {node: '>= 0.6.0'}
 
   long@5.3.2:
     resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
@@ -4280,6 +4327,13 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  lucide@1.51.0:
+    resolution: {integrity: sha512-7K2Zm6Haz2EhYOAAE1ZQfsfs83ywGodSCvwr7YvCBzB9oelqDsRvMFUBDbXEGUaUMAisC7xcjMmSrozzYL/UwQ==}
+
+  machina@7.0.1:
+    resolution: {integrity: sha512-0Xkgs8NeBvO2hW6bjJT8ewLWrMfh1haMPstaghpASWjXkLjRhtDiaJG1Kb7mslaOHxZYxpH7PIjpmirRVYbMMA==}
+    engines: {node: '>=22.22'}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -4481,6 +4535,26 @@ packages:
   module-details-from-path@1.0.4:
     resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
 
+  morphicons@1.7.1:
+    resolution: {integrity: sha512-q5ylxy5/d7vBg0OAzanlooXf05PekovMYDuuQVpr6vAQZxl99lrJbaIi+jJ32PXQf9WEEaDO2pbNBsx1ZhEnFQ==}
+    peerDependencies:
+      react: '>=18'
+      react-native: '>=0.71'
+      react-native-svg: '>=14'
+      svelte: '>=5'
+      vue: '>=3.3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-native:
+        optional: true
+      react-native-svg:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
+
   motion-dom@14.0.0:
     resolution: {integrity: sha512-aU3ApXo1yTpeUi3JU+jbDk2TELjxPE3MbBMUP7nZHlARb6RweJK+ojmLjpuB0YsY6zhbBl1YWGo8LMsI1/Llqw==}
 
@@ -4560,6 +4634,10 @@ packages:
     peerDependenciesMeta:
       encoding:
         optional: true
+
+  node-ical@0.27.3:
+    resolution: {integrity: sha512-KT8DFQXcOlx4kXRUEr7XvEDa3SE7yury8ZKG6GB3JB20v9d0SKSSieThbXCI8kpTsyNeQkKqfJn/nbnmaRMpRw==}
+    engines: {node: '>=22'}
 
   node-releases@2.0.57:
     resolution: {integrity: sha512-kQK9LGGFiHtrWiNhZtA7Qbw17AQz+dmsEKODRIVTXA9+e5MS/2gZEBhYJt13GrAz5/IOZKddH/0Z3TP/Zgo+yw==}
@@ -5059,6 +5137,9 @@ packages:
   rrdom@2.1.7:
     resolution: {integrity: sha512-jm7IN2aaG6891OqFAYw/b8dw5FLiMeCTrU4HIUr40I6tTaUX2Rrhba5vjjMRARQClBFDA04vvf9HFD9WnZFpFg==}
 
+  rrule-temporal@2.2.8:
+    resolution: {integrity: sha512-+wWUe0J02oMh1UWKIt1RTu2H0Cz+gP11O/iweK0MN2UP6JLGeepTUkbSBa90Hxq0W+ywSxM9IlJNouIUdMOwhg==}
+
   rrweb-snapshot@2.1.7:
     resolution: {integrity: sha512-exIZ4dxX498CZszs4ji0KKn8lhX9sBPBdD431t0RQOqCTStAHrmdWKK2s8tWSL32iRS+AOafbMuf6TOIZxW6ug==}
 
@@ -5067,6 +5148,9 @@ packages:
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
+
+  rxjs@7.8.2:
+    resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
 
   safe-array-concat@1.1.4:
     resolution: {integrity: sha512-wtZlHyOje6OZTGqAoaDKxFkgRtkF9CnHAVnCHKfuj200wAgL+bSJhdsCD2l0Qx/2ekEXjPWcyKkfGb5CPboslg==}
@@ -5098,6 +5182,13 @@ packages:
 
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
+
+  sdp-transform@2.15.0:
+    resolution: {integrity: sha512-KrOH82c/W+GYQ0LHqtr3caRpM3ITglq3ljGUIb8LTki7ByacJZ9z+piSGiwZDsRyhQbYBOBJgr2k6X4BZXi3Kw==}
+    hasBin: true
+
+  sdp@3.2.2:
+    resolution: {integrity: sha512-xZocWwfyp4hkbN4hLWxMjmv2Q8aNa9MhmOZ7L9aCZPT+dZsgRr6wZRrSYE3HTdyk/2pZKPSgqI7ns7Een1xMSA==}
 
   section-matter@1.0.0:
     resolution: {integrity: sha512-vfD3pmTzGpufjScBh50YHKzEu2lxBWhVEHsNGoEXmCmn2hKGfeNLYMzCJpe8cD7gqX7TJluOVpBkAequ6dgMmA==}
@@ -5307,6 +5398,15 @@ packages:
   teex@1.0.1:
     resolution: {integrity: sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==}
 
+  temporal-polyfill@1.0.5:
+    resolution: {integrity: sha512-+H/mmY74i6wXCMcjIhGuSnODcyZnc4eois2myhOyX0UqRAKNXQY5m9iB1en5jQ/n4SXtjLXo1ElBI5bmn8tZwQ==}
+
+  temporal-spec@1.0.1:
+    resolution: {integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==}
+
+  temporal-utils@1.0.3:
+    resolution: {integrity: sha512-9jbTSX3HvkOWvDpNpFzwX/d1mkCrgQgwLmVTOEiuocZGKHsrQJtttGZFmybJ2zYP5zCSZuU5ZyeS8+eOEPABiQ==}
+
   text-decoder@1.2.7:
     resolution: {integrity: sha512-vlLytXkeP4xvEq2otHeJfSQIRyWxo/oZGEbXrtEEF9Hnmrdly59sUbzZ/QgyWuLYHctCHxFF4tRQZNQ9k60ExQ==}
 
@@ -5381,6 +5481,9 @@ packages:
   typed-array-length@1.0.8:
     resolution: {integrity: sha512-phPGCwqr2+Qo0fwniCE8e4pKnGu/yFb5nD5Y8bf0EEeiI5GklnACYA9GFy/DrAeRrKHXvHn+1SUsOWgJp6RO+g==}
     engines: {node: '>= 0.4'}
+
+  typed-emitter@2.1.0:
+    resolution: {integrity: sha512-g/KzbYKbH5C2vPkaXGu8DJlHrGKHLsM25Zg9WuC9pMGfuvT+X25tZQWo5fK1BjBm8+UrVE9LDCvaY0CQk+fXDA==}
 
   typescript-eslint@8.71.0:
     resolution: {integrity: sha512-fBdHYiqQ14RW6mOMXD14Svn82ZsCYAoQSzGRzyEjR59S5A2Krh/l7fGTOQ7iCr8gGy/mHVXtEF7s5fgjEdV0Pw==}
@@ -5535,6 +5638,10 @@ packages:
 
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
+
+  webrtc-adapter@9.0.6:
+    resolution: {integrity: sha512-CHbl2ZQbxx164IgWRgzJno4hWtM4tFbRam1QfI3Yxhs3w/DvqluVxVWeXs3oL5/fbGkSNLKo0Ty5MgUWceNhog==}
+    engines: {node: '>=6.0.0', npm: '>=3.10.0'}
 
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
@@ -6031,6 +6138,8 @@ snapshots:
       '@babel/helper-string-parser': 8.0.6
       '@babel/helper-validator-identifier': 8.0.6
 
+  '@bufbuild/protobuf@1.10.1': {}
+
   '@clack/core@1.5.1':
     dependencies:
       fast-wrap-ansi: 0.2.2
@@ -6044,6 +6153,22 @@ snapshots:
       sisteransi: 1.0.5
 
   '@electric-sql/pglite@0.5.8': {}
+
+  '@elevenlabs/client@1.26.0(@types/dom-mediacapture-record@1.0.22)':
+    dependencies:
+      '@elevenlabs/types': 0.24.0
+      livekit-client: 2.22.3(@types/dom-mediacapture-record@1.0.22)
+    transitivePeerDependencies:
+      - '@types/dom-mediacapture-record'
+
+  '@elevenlabs/react@1.16.0(@types/dom-mediacapture-record@1.0.22)(react@19.2.8)':
+    dependencies:
+      '@elevenlabs/client': 1.26.0(@types/dom-mediacapture-record@1.0.22)
+      react: 19.2.8
+    transitivePeerDependencies:
+      - '@types/dom-mediacapture-record'
+
+  '@elevenlabs/types@0.24.0': {}
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -6532,13 +6657,19 @@ snapshots:
   '@libsql/win32-x64-msvc@0.5.29':
     optional: true
 
+  '@livekit/mutex@1.1.1': {}
+
+  '@livekit/protocol@1.50.4':
+    dependencies:
+      '@bufbuild/protobuf': 1.10.1
+
   '@lukeed/csprng@1.1.0': {}
 
   '@lukeed/uuid@2.0.1':
     dependencies:
       '@lukeed/csprng': 1.1.0
 
-  '@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)':
+  '@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)':
     dependencies:
       '@a2a-js/sdk-v0_3': '@a2a-js/sdk@0.3.14(express@5.2.1(supports-color@7.2.0))'
       '@a2a-js/sdk-v1': '@a2a-js/sdk@1.0.1(express@5.2.1(supports-color@7.2.0))'
@@ -6566,7 +6697,7 @@ snapshots:
       p-map: 7.0.8
       p-retry: 7.1.1
       picomatch: 4.0.7
-      posthog-node: 5.55.0
+      posthog-node: 5.55.0(rxjs@7.8.2)
       re2js: 2.8.6
       ws: 8.22.0
       xxhash-wasm: 1.1.0
@@ -6590,14 +6721,14 @@ snapshots:
       - zod-openapi
       - zod-to-json-schema
 
-  '@mastra/deployer@1.74.0(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5)':
+  '@mastra/deployer@1.74.0(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
       '@babel/core': 8.0.6
       '@babel/preset-typescript': 8.0.1(@babel/core@8.0.6)
       '@babel/traverse': 8.0.6
       '@hono/node-ws': 1.3.1(@hono/node-server@2.1.3(hono@4.13.12))(hono@4.13.12)
-      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
-      '@mastra/server': 1.74.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)
+      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@mastra/server': 1.74.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)
       '@optimize-lodash/rollup-plugin': 5.1.0(rollup@4.64.0)
       '@rollup/plugin-alias': 6.0.0(rollup@4.64.0)
       '@rollup/plugin-commonjs': 29.0.2(rollup@4.64.0)
@@ -6630,28 +6761,28 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@mastra/libsql@1.25.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))':
+  '@mastra/libsql@1.25.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))':
     dependencies:
       '@libsql/client': 0.18.0
-      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@mastra/loggers@1.3.4(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))':
+  '@mastra/loggers@1.3.4(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))':
     dependencies:
-      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       pino: 10.4.0
       pino-pretty: 13.1.3
 
-  '@mastra/observability@1.18.3(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)':
+  '@mastra/observability@1.18.3(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)':
     dependencies:
-      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       zod: 4.6.5
 
-  '@mastra/pg@1.29.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))':
+  '@mastra/pg@1.29.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))':
     dependencies:
-      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       async-mutex: 0.5.0
       pg: 8.23.1
       pg-connection-string: 2.14.1
@@ -6665,9 +6796,9 @@ snapshots:
       zod: 4.6.5
       zod-from-json-schema: 0.5.6
 
-  '@mastra/server@1.74.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)':
+  '@mastra/server@1.74.0(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(zod@4.6.5)':
     dependencies:
-      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       hono: 4.13.12
       zod: 4.6.5
 
@@ -8017,6 +8148,8 @@ snapshots:
   '@types/debug@4.1.13':
     dependencies:
       '@types/ms': 2.1.0
+
+  '@types/dom-mediacapture-record@1.0.22': {}
 
   '@types/estree-jsx@1.0.5':
     dependencies:
@@ -9868,6 +10001,20 @@ snapshots:
       lightningcss-win32-arm64-msvc: 1.32.0
       lightningcss-win32-x64-msvc: 1.32.0
 
+  livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22):
+    dependencies:
+      '@livekit/mutex': 1.1.1
+      '@livekit/protocol': 1.50.4
+      '@types/dom-mediacapture-record': 1.0.22
+      events: 3.3.0
+      jose: 6.2.12
+      loglevel: 1.9.2
+      machina: 7.0.1
+      sdp-transform: 2.15.0
+      tslib: 2.8.1
+      typed-emitter: 2.1.0
+      webrtc-adapter: 9.0.6
+
   local-pkg@1.2.1:
     dependencies:
       mlly: 1.8.2
@@ -9879,6 +10026,8 @@ snapshots:
       p-locate: 5.0.0
 
   lodash.merge@4.6.2: {}
+
+  loglevel@1.9.2: {}
 
   long@5.3.2: {}
 
@@ -9900,21 +10049,25 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
+  lucide@1.51.0: {}
+
+  machina@7.0.1: {}
+
   magic-string@0.30.21:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
 
   markdown-table@3.0.4: {}
 
-  mastra@1.32.1(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5):
+  mastra@1.32.1(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(rxjs@7.8.2)(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5):
     dependencies:
       '@babel/parser': 8.0.6
       '@babel/types': 8.0.6
       '@clack/prompts': 1.8.1
       '@expo/devcert': 1.2.2(supports-color@7.2.0)
-      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
-      '@mastra/deployer': 1.74.0(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5)
-      '@mastra/loggers': 1.3.4(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))
+      '@mastra/core': 1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@mastra/deployer': 1.74.0(@hono/node-server@2.1.3(hono@4.13.12))(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@7.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@mastra/loggers': 1.3.4(@mastra/core@1.74.0(express@5.2.1(supports-color@7.2.0))(rxjs@7.8.2)(supports-color@7.2.0)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))
       archiver: 8.0.0
       commander: 14.0.3
       dotenv: 17.4.2
@@ -9924,7 +10077,7 @@ snapshots:
       local-pkg: 1.2.1
       openapi-fetch: 0.17.0
       picocolors: 1.1.1
-      posthog-node: 5.55.0
+      posthog-node: 5.55.0(rxjs@7.8.2)
       semver: 7.8.5
       serve-handler: 6.1.7
       strip-json-comments: 5.0.3
@@ -10340,6 +10493,10 @@ snapshots:
 
   module-details-from-path@1.0.4: {}
 
+  morphicons@1.7.1(react@19.2.8):
+    optionalDependencies:
+      react: 19.2.8
+
   motion-dom@14.0.0:
     dependencies:
       motion-utils: 14.0.0
@@ -10409,6 +10566,11 @@ snapshots:
   node-fetch@2.7.0:
     dependencies:
       whatwg-url: 5.0.0
+
+  node-ical@0.27.3:
+    dependencies:
+      rrule-temporal: 2.2.8
+      temporal-polyfill: 1.0.5
 
   node-releases@2.0.57: {}
 
@@ -10680,9 +10842,11 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  posthog-node@5.55.0:
+  posthog-node@5.55.0(rxjs@7.8.2):
     dependencies:
       '@posthog/core': 1.55.3
+    optionalDependencies:
+      rxjs: 7.8.2
 
   prelude-ls@1.2.1: {}
 
@@ -11056,6 +11220,10 @@ snapshots:
     dependencies:
       rrweb-snapshot: 2.1.7
 
+  rrule-temporal@2.2.8:
+    dependencies:
+      temporal-spec: 1.0.1
+
   rrweb-snapshot@2.1.7:
     dependencies:
       postcss: 8.5.28
@@ -11074,6 +11242,11 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  rxjs@7.8.2:
+    dependencies:
+      tslib: 2.8.1
+    optional: true
 
   safe-array-concat@1.1.4:
     dependencies:
@@ -11105,6 +11278,10 @@ snapshots:
   safer-buffer@2.1.2: {}
 
   scheduler@0.27.0: {}
+
+  sdp-transform@2.15.0: {}
+
+  sdp@3.2.2: {}
 
   section-matter@1.0.0:
     dependencies:
@@ -11400,6 +11577,15 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
+  temporal-polyfill@1.0.5:
+    dependencies:
+      temporal-spec: 1.0.1
+      temporal-utils: 1.0.3
+
+  temporal-spec@1.0.1: {}
+
+  temporal-utils@1.0.3: {}
+
   text-decoder@1.2.7:
     dependencies:
       b4a: 1.9.0
@@ -11491,6 +11677,10 @@ snapshots:
       is-typed-array: 1.1.15
       possible-typed-array-names: 1.1.0
       reflect.getprototypeof: 1.0.10
+
+  typed-emitter@2.1.0:
+    optionalDependencies:
+      rxjs: 7.8.2
 
   typescript-eslint@8.71.0(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3):
     dependencies:
@@ -11660,6 +11850,10 @@ snapshots:
   web-vitals@6.2.2: {}
 
   webidl-conversions@3.0.1: {}
+
+  webrtc-adapter@9.0.6:
+    dependencies:
+      sdp: 3.2.2
 
   whatwg-url@5.0.0:
     dependencies:
