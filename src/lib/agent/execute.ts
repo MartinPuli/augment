@@ -189,6 +189,8 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
           { body: { offer_id: input.offer_id, max_spend_cents: remaining } },
         );
         const lease = { ...acc.lease, payment: acc.lease.payment ?? acc.payment };
+        const me = S().me;
+        if (me && typeof acc.balance_cents === "number") S().set({ me: { ...me, balance_cents: acc.balance_cents } });
         const widgetId = S().widgets.find((w) => w.id === `deal-${input.offer_id}`)?.id ?? `deal-${input.offer_id}`;
         S().upsertWidget({ id: widgetId, type: "lease", title: "Lease", size: "md", props: { lease } });
         if (lease.state === "active" && lease.payment?.status === "succeeded") {

@@ -6,8 +6,28 @@ import { withInterfere } from "@interfere/next/config";
 const interfere = !!process.env.INTERFERE_PUBLIC_KEY && !!process.env.INTERFERE_API_KEY;
 if (process.env.INTERFERE_PUBLIC_KEY && !interfere) console.warn("[interfere] INTERFERE_API_KEY is not set: Interfere build integration disabled");
 
+// Phones reach the dev server through a tunnel or the LAN; let them load dev assets/HMR.
+const publicHost = (() => {
+  try {
+    return process.env.NEXT_PUBLIC_PUBLIC_ORIGIN ? new URL(process.env.NEXT_PUBLIC_PUBLIC_ORIGIN).hostname : null;
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  devIndicators: false,
+  allowedDevOrigins: [
+    ...(publicHost ? [publicHost] : []),
+    "*.trycloudflare.com",
+    "*.ngrok-free.app",
+    "*.ngrok.app",
+    "*.fly.dev",
+    "*.local",
+    "192.168.*.*",
+    "10.*.*.*",
+    "172.*.*.*",
+  ],
   ...(interfere ? { env: { NEXT_PUBLIC_GHOST_INTERFERE: "1" } } : {}),
 };
 

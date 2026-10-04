@@ -30,9 +30,14 @@ export default function PairPhoneWidget({ report, emit }: WidgetComponentProps<R
   const labelRef = useRef<string>("phone");
   const emittedPublish = useRef(false);
   const statusRef = useRef<Status>("creating");
+  // emit/report may change identity every render: keep them in refs so the SSE stream isn't resubscribed.
+  const emitRef = useRef(emit);
+  const reportRef = useRef(report);
   useEffect(() => {
     statusRef.current = status;
-  }, [status]);
+    emitRef.current = emit;
+    reportRef.current = report;
+  });
 
   const regenerate = useCallback(() => {
     setStatus("creating");
@@ -90,15 +95,15 @@ export default function PairPhoneWidget({ report, emit }: WidgetComponentProps<R
         setPublished({ name: e.device.name, caps });
         if (!emittedPublish.current && caps.length) {
           emittedPublish.current = true;
-          emit(`Phone '${e.device.name}' published ${caps.length} capabilities (device_id ${e.device.device_id}): ${caps.join(", ")}`);
+          emitRef.current(`Phone '${e.device.name}' published ${caps.length} capabilities (device_id ${e.device.device_id}): ${caps.join(", ")}`);
         }
       }
     });
-  }, [emit]);
+  }, []);
 
   useEffect(() => {
-    report({ status, pairing_id: pairing?.pairing_id ?? null, phone_label: pending?.label ?? null, published_capabilities: published?.caps ?? [] });
-  }, [status, pairing?.pairing_id, pending?.label, published, report]);
+    reportRef.current({ status, pairing_id: pairing?.pairing_id ?? null, phone_label: pending?.label ?? null, published_capabilities: published?.caps ?? [] });
+  }, [status, pairing?.pairing_id, pending?.label, published]);
 
   const onConfirm = async () => {
     if (!pairing) return;
@@ -106,7 +111,7 @@ export default function PairPhoneWidget({ report, emit }: WidgetComponentProps<R
     try {
       await confirmPairing(pairing.pairing_id);
       setStatus("paired");
-      emit(`User confirmed phone '${labelRef.current}' — it is now paired`);
+      emitRef.current(`User confirmed phone '${labelRef.current}' — it is now paired`);
     } catch (e) {
       setStatus("pending");
       setError(e instanceof Error ? e.message : String(e));

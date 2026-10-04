@@ -37,7 +37,15 @@ import type { WidgetComponentProps } from "../types";
 
 export interface LiveViewProps {
   source: LiveSource;
-  track?: { enabled?: boolean; classes?: string[]; follow?: boolean | number; max_zoom?: number; model?: string };
+  track?: {
+    enabled?: boolean;
+    classes?: string[];
+    follow?: boolean | number;
+    max_zoom?: number;
+    /** Optional: detector model id ("dfine-n" default, "yolov10n" AGPL) and backend override. */
+    model?: string;
+    backend?: "auto" | "webgpu" | "wasm";
+  };
   title?: string;
 }
 
@@ -81,6 +89,7 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
   const followProp: boolean | number = props.track?.follow ?? (trackOn ? true : false);
   const maxZoom = Math.max(1, Math.min(6, Number(props.track?.max_zoom) || 3));
   const modelId = getModel(props.track?.model ?? DEFAULT_MODEL_ID).id;
+  const backendPref = props.track?.backend ?? "auto";
   const title = props.title ?? (source && "title" in source ? source.title : undefined) ?? "Live view";
 
   const [phase, setPhase] = useState<Phase>("connecting");
@@ -191,6 +200,7 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
     setModelError(null);
     const det = createDetector({
       model: modelId,
+      backend: backendPref,
       minScore: 0.12,
       onProgress: ({ loaded, total }) => !cancelled && setModelProgress(total ? loaded / total : 0),
     });
@@ -208,7 +218,7 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
       det.dispose();
       if (detRef.current === det) detRef.current = null;
     };
-  }, [trackOn, modelId]);
+  }, [trackOn, modelId, backendPref]);
 
   /* ---------------- follow config ---------------- */
   useEffect(() => {
@@ -296,6 +306,7 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
           perPassMs: det.lastMs,
           budgetMs: 160,
           allow: det.backend === "webgpu" || (det.lastMs > 0 && det.lastMs < 45),
+          modelInput: det.input,
         });
         const t0 = performance.now();
         // capture every region from the same displayed frame before any inference starts

@@ -7,7 +7,7 @@
  */
 import type * as OrtNS from "onnxruntime-web";
 import { getModel, type VisionModelSpec } from "./models";
-import { computeLayout, decodeDfine, decodeYolov10, rgbaToTensor } from "./postprocess";
+import { computeLayout, decodeDfine, decodeYolov10, resampleToTensor } from "./postprocess";
 import type { Detection, DetectorBackend } from "./types";
 
 export const ORT_VERSION = "1.30.0";
@@ -117,8 +117,9 @@ async function createSession(which: "webgpu" | "wasm"): Promise<void> {
     graphOptimizationLevel: "all",
   });
   backend = which;
-  // DETR-style models accept dynamic sizes: use a smaller input on CPU to keep the frame rate usable.
-  input = model.family === "dfine" && which === "wasm" ? 512 : model.input;
+  // Keep the native 640 input on every backend: a smaller input (tried 512 on WASM) loses most small
+  // objects such as distant cars (24 -> 1 detections >= 0.3 on a Caltrans frame).
+  input = model.input;
   tensorBuf = undefined;
 }
 
@@ -149,21 +150,25 @@ async function init(msg: Extract<WorkerIn, { type: "init" }>) {
 
 async function runOnce(bitmap: ImageBitmap): Promise<Detection[]> {
   if (!session || !ort) throw new Error("detector not ready");
-  const layout = computeLayout(bitmap.width, bitmap.height, { input, resize: model.resize });
-  if (!canvas || canvas.width !== input) {
-    canvas = new OffscreenCanvas(input, input);
+  // Bring the frame to at most ~2x the model input with the canvas (cheap), then resample into the
+  // tensor with Lanczos-3 (sharp kernels keep small objects detectable).
+  const cap = input * 2;
+  const k = Math.min(1, cap / Math.max(bitmap.width, bitmap.height));
+  const sw = Math.max(1, Math.round(bitmap.width * k));
+  const sh = Math.max(1, Math.round(bitmap.height * k));
+  if (!canvas || canvas.width !== sw || canvas.height !== sh) {
+    canvas = new OffscreenCanvas(sw, sh);
     g = canvas.getContext("2d", { willReadFrequently: true }) as OffscreenCanvasRenderingContext2D;
   }
   const c = g!;
-  if (model.resize === "letterbox") {
-    c.fillStyle = "rgb(114,114,114)";
-    c.fillRect(0, 0, input, input);
-  }
   c.imageSmoothingEnabled = true;
-  c.imageSmoothingQuality = "medium";
-  c.drawImage(bitmap, layout.px, layout.py, layout.dw, layout.dh);
-  const rgba = c.getImageData(0, 0, input, input).data;
-  tensorBuf = rgbaToTensor(rgba, input, tensorBuf);
+  c.imageSmoothingQuality = "high";
+  c.drawImage(bitmap, 0, 0, sw, sh);
+  const rgba = c.getImageData(0, 0, sw, sh).data;
+  const inner = computeLayout(sw, sh, { input, resize: model.resize });
+  tensorBuf = resampleToTensor(rgba, sw, sh, inner, tensorBuf);
+  // boxes are decoded back to the ORIGINAL bitmap coordinates
+  const layout = { ...inner, sx: inner.sx * k, sy: inner.sy * k, srcW: bitmap.width, srcH: bitmap.height };
   const feeds = { [session.inputNames[0]]: new ort.Tensor("float32", tensorBuf, [1, 3, input, input]) };
   const out = await session.run(feeds);
   try {

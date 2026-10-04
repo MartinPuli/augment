@@ -21,22 +21,29 @@ function clampTile(b: Box, fw: number, fh: number): Tile {
 }
 
 /**
- * Extra regions to run besides the full frame.
- * - zoomed follow-cam: one tile = the visible crop (+25 % margin)
+ * Extra regions to run besides the full frame (only for large sources, never upsampling):
+ * - zoomed follow-cam: one tile around the visible crop (+25 % margin, at least ~model-input size)
  * - otherwise: two overlapping halves along the long side (only if the budget allows)
  */
 export function planTiles(
   fw: number,
   fh: number,
   crop: Box | null,
-  opts: { perPassMs: number; budgetMs: number; allow: boolean },
+  opts: { perPassMs: number; budgetMs: number; allow: boolean; modelInput?: number },
 ): Tile[] {
   if (!opts.allow) return [];
   const per = Math.max(1, opts.perPassMs || 60);
+  // Never upsample: DETR/YOLO detectors do worse on blurry upscaled crops than on the native frame
+  // (measured on Caltrans TVD32: 41 cars at full frame vs 0 on a 2.3x-upscaled crop). Tiles only pay
+  // off when the source is much larger than the model input (e.g. a 1280-1920 px webcam / phone).
+  const minSide = (opts.modelInput ?? 640) * 0.85;
+  if (Math.max(fw, fh) < (opts.modelInput ?? 640) * 1.5) return [];
   if (crop && crop.w < fw / 1.35) {
     if (per * 2 > opts.budgetMs) return [];
     const m = 0.25;
-    return [clampTile({ x: crop.x - (crop.w * m) / 2, y: crop.y - (crop.h * m) / 2, w: crop.w * (1 + m), h: crop.h * (1 + m) }, fw, fh)];
+    const w = Math.max(minSide, crop.w * (1 + m));
+    const h = Math.max(minSide * (fh / fw), crop.h * (1 + m));
+    return [clampTile({ x: crop.x + crop.w / 2 - w / 2, y: crop.y + crop.h / 2 - h / 2, w, h }, fw, fh)];
   }
   if (per * 3 > opts.budgetMs) return [];
   if (fw >= fh) {

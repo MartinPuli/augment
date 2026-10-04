@@ -30,6 +30,7 @@ async function api<T = Record<string, unknown>>(p: string, body?: unknown): Prom
     method: body === undefined ? "GET" : "POST",
     headers: { ...(cookie ? { cookie } : {}), ...(body !== undefined ? { "content-type": "application/json" } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
   });
   const sc = r.headers.getSetCookie?.() ?? [];
   if (sc.length) cookie = sc.map((c) => c.split(";")[0]).join("; ");
@@ -128,6 +129,11 @@ async function main() {
     "--window-size=390,844",
     "about:blank",
   ]);
+  const watchdog = setTimeout(() => {
+    console.log("FAIL  watchdog: test took longer than 180 s");
+    chrome.kill("SIGKILL");
+    process.exit(1);
+  }, 180_000);
   try {
     let wsUrl = "";
     for (let i = 0; i < 40 && !wsUrl; i++) {
@@ -213,6 +219,7 @@ async function main() {
     const after = await invoke(deviceId, "camera.snapshot");
     check("after Stop access the camera is not invokable", after.json.invocation?.state !== "succeeded", after);
   } finally {
+    clearTimeout(watchdog);
     chrome.kill("SIGTERM");
   }
   console.log(`\nscreenshots: ${SHOTS}`);

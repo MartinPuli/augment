@@ -8,13 +8,13 @@ sponsor account.
 
 | Partner | Job in GHOST | Env | Verified |
 |---|---|---|---|
-| Exa | Finds public physical sources on the web, such as live webcams, sensor feeds and open data. Can publish them as **candidate** devices. | `EXA_API_KEY` | Offline against a mock Exa API. **Not live.** |
-| Kernel | A cloud browser turns any public web page into a `web.observe` image capability (a screenshot with capture time and provenance). | `KERNEL_API_KEY` | Offline against a mock Kernel API. **Not live.** |
-| AgentMail | Polty's own inbox. Sends evidence reports with observations attached, and reads mail people send to Polty. | `AGENTMAIL_API_KEY`, `AGENTMAIL_INBOX_USERNAME` | Offline against a mock AgentMail API. **Not live.** |
-| Executor | An MCP gateway in both directions. Polty can use tools the user connected in Executor, and Claude Code, Cursor or Codex can reach GHOST hardware through Executor. | `EXECUTOR_MCP_URL`, `EXECUTOR_TOKEN` | The bridge was verified live against a real MCP server (GHOST's own `/mcp`). **Not tested against a running Executor.** |
+| Exa | Finds public physical sources on the web, such as live webcams, sensor feeds and open data. Can publish them as **candidate** devices. | `EXA_API_KEY` | **Live** (Oct 4): search and discover-webcams. Also tested against a mock. |
+| Kernel | A cloud browser turns any public web page into a `web.observe` image capability (a screenshot with capture time and provenance). | `KERNEL_API_KEY` | **Live** (Oct 4): screenshots of example.com and of Exa-found Golden Gate webcam pages, the browser close, and a live view URL. Also tested against a mock. |
+| AgentMail | Polty's own inbox. Sends evidence reports with observations attached, and reads mail people send to Polty. | `AGENTMAIL_API_KEY`, `AGENTMAIL_INBOX_USERNAME` | Offline against a mock AgentMail API only. **Not live:** the configured key gets `403 Forbidden` on every endpoint, including `auth.me`, on both the US and EU APIs. |
+| Executor | An MCP gateway in both directions. Polty can use tools the user connected in Executor, and Claude Code, Cursor or Codex can reach GHOST hardware through Executor. | `EXECUTOR_MCP_URL`, `EXECUTOR_TOKEN` | **Live** (Oct 4) against Executor 1.6.10 running locally: the bridge lists and calls tools, GHOST's `/mcp` was registered in Executor, and a GHOST tool was called *through* Executor. |
 
-No sponsor keys were available while this was built. The check script runs every live call automatically once
-keys are in `.env.local`:
+The check script runs every live call automatically for each key present in `.env.local`. It never touches
+`DATABASE_URL`: it drops the variable and refuses to run unless the database is in-memory PGlite.
 
 ```bash
 pnpm exec tsx scripts/partners-check.ts
@@ -78,7 +78,11 @@ Notes on candidates:
 - `EXA_API_KEY` is required.
 - `EXA_BASE_URL` is optional (proxy or tests).
 
-**Verified:** request shaping, sanitization, filtering and publishing were tested against a mock Exa API. **No live Exa call has been made** (no key).
+**Verified live** on Oct 4:
+- `search` with "Golden Gate Bridge" and `purpose:"webcam"` returned parksconservancy.org, kron4.com and isgoldengatevisible.com webcam pages.
+- `discover-webcams` published 5 candidates.
+
+Sanitization and injection screening were also tested against a mock. A single transient `fetch failed` is retried once.
 
 ## Kernel: a public web page becomes an observation
 
@@ -86,17 +90,25 @@ Notes on candidates:
 that page in a cloud browser, waits, and takes a screenshot. The result is a normal GHOST image observation: it is stored by
 the coordinator, emitted on the event bus, and usable as evidence in experiences and emails.
 
+**Focusing on the camera.** After `wait_ms`, the page is scrolled (no clicks, no typing) so that its largest visible
+`video`, player `iframe`, `canvas` or large `img` sits in the centre of the viewport. Ad iframes and logos are ignored.
+The screenshot therefore shows the camera, not the site header.
+- `data.focused_media` records what was centred: `{tag, width, height, src_host}`, or `null`.
+- When no such element exists, the observation `note` says so honestly ("this shows the page itself, not necessarily a live view").
+- Cookie banners are **not** clicked, because accepting terms is the user's decision.
+
 **Adapter.** `src/lib/ghost/server/adapters/kernel.ts` exports `kernelAdapter`:
 - id `kernel`, owner `provider:kernel`.
 - One capability, `web.observe`: kind `observe`, semantic type `image.observe`, verification `observation`, `exclusive:false`, `rate_per_min: 6`.
 - Arguments: `{ url?: string, wait_ms?: number (0–8000, default 2500), full_page?: boolean (default false) }`. `url` defaults to the device's `meta.url`.
+- An override `url` must stay on the device's host. Success promotes the device to `verified`, so it has to be evidence about *that* page. For any other site, use `/partners/kernel/observe {url}`.
 
 The observation looks like this:
 - `kind:"image"` with `image/jpeg` media (PNG if Kernel's native screenshot fallback is used).
 - `captured_at` is the moment of the screenshot. This is honest: it is a real capture of the page at that time.
 - `note`: "Screenshot of the operator's public page… The page may itself show a delayed or cached feed."
 - `source.url` is the final page URL.
-- `data` contains `{ live_view_url, page_title, requested_url, final_url, http_status, wait_ms, kernel_session_id, renderer:"kernel" }`.
+- `data` contains `{ live_view_url, page_title, requested_url, final_url, http_status, wait_ms, focused_media, kernel_session_id, renderer:"kernel" }`.
 
 **How it calls Kernel** (`@onkernel/sdk`, no local CDP and no `playwright-core` needed):
 1. `browsers.create({ headless:false, stealth:false, timeout_seconds:120, viewport:1280x720 })`. Headful is the default so the UI can embed `browser_live_view_url`. Set `KERNEL_HEADLESS=1` to save cost.
@@ -130,13 +142,16 @@ invocation records, `observation.created` events and promotion to `verified`. Th
 - `KERNEL_API_KEY` is required.
 - Optional: `KERNEL_HEADLESS=1`, `KERNEL_IDLE_CLOSE_S`, `KERNEL_MAX_SESSION_S`, `KERNEL_TIMEOUT_S`, `KERNEL_BASE_URL`.
 
-**Verified:** tested against a mock Kernel API. That covered:
-- the create body (`stealth:false`), the embedded URL in the execute code and the JPEG magic-byte check;
-- the observation fields, session reuse and `DELETE` on close;
-- promotion of the device to `verified`.
+**Verified live** on Oct 4, through the real coordinator `invoke()` path (in-memory database):
+- `observe https://example.com` returned a 46 KB JPEG and a live view URL.
+- **The Exa → Kernel path worked:** `discover-webcams "Golden Gate Bridge San Francisco"` published a candidate, and `observe {ref}` captured the East Beach PTZ webcam showing the bridge. That was 47–75 KB with `focused_media` set to the 640×480 iframe, and the device was promoted to `verified`. webviewcams.com also produced a clear camera frame.
+- `close` deleted the browser.
 
-The adapter also fails cleanly with no key, through the real coordinator `invoke()`. **No live Kernel browser has been created** (no key). The first live run is
-the check script, which screenshots `https://example.com`.
+The mock-API tests also cover:
+- the create body (`stealth:false`, `timeout_seconds`);
+- JSON-literal embedding of the URL;
+- that the generated Playwright code compiles;
+- session reuse and failure without a key.
 
 ## AgentMail: Polty's inbox
 
@@ -182,13 +197,14 @@ GET  /api/v1/partners/mail/messages/:message_id
 - `AGENTMAIL_API_KEY` is required.
 - Optional: `AGENTMAIL_INBOX_USERNAME` (default `polty-ghost`), `AGENTMAIL_MAX_PER_HOUR` (default 10), `AGENTMAIL_BASE_URL` (for example `https://api.agentmail.eu`).
 
-**Verified:** tested against a mock AgentMail API. That covered:
+**Verified offline only:** tested against a mock AgentMail API. That covered:
 - `client_id` and `username` on create;
 - the send body (single `to`, HTML containing `cid:`, plain text with capture times, a base64 JPEG attachment);
-- inbox listing and sanitization, and reading a single message;
-- the 429 rate limit.
+- inbox listing and sanitization, reading a single message, and the 429 rate limit.
 
-The rendered HTML was checked visually. **No live AgentMail call has been made** (no key).
+The rendered HTML was checked visually.
+
+**Live is blocked by the key:** the `AGENTMAIL_API_KEY` in `.env.local` gets `403 {"message":"Forbidden"}` from `GET /v0/auth/me` and from inbox listing, on both api.agentmail.to and api.agentmail.eu. Create a new organization API key at console.agentmail.to, then rerun the check script. Its 403 errors now carry the hint "the partner rejected the API key".
 
 ## Executor: MCP in both directions
 
@@ -258,7 +274,7 @@ GHOST serves its own MCP server at `/mcp`. It is stateless Streamable HTTP with 
 
 All of them act as that principal.
 
-To register GHOST in Executor:
+To register GHOST in Executor (**steps 2, 3 and the API variant below were verified live**):
 
 1. Run Executor: `npm i -g executor && executor install && executor web`, or Docker:
    `docker run -d -p 4788:4788 -v executor-data:/data ghcr.io/rhyssullivan/executor-selfhost:latest`.
@@ -270,6 +286,20 @@ To register GHOST in Executor:
    - Executor probes the URL and shows "Ready to add" when it can list GHOST's tools.
 4. Optionally, set per-tool policies in Executor. For example, require approval for `accept_quote` (spends test funds) and
    `invoke_capability` (acts on hardware), and allow `search_capabilities` and `recall_experience`.
+   The same thing can be done through Executor's HTTP API, which is the exact sequence we ran:
+   ```bash
+   EXEC=http://127.0.0.1:4788; T=<token from ~/.executor/server-control/auth.json>
+   curl -s -X POST $EXEC/api/mcp/probe   -H "Authorization: Bearer $T" -H 'content-type: application/json' \
+     -d '{"endpoint":"https://<ghost-host>/mcp","headers":{"Authorization":"Bearer <owner_token>"}}'
+     # -> {"connected":true,"toolCount":12,"serverName":"ghost-coordinator",...}
+   curl -s -X POST $EXEC/api/mcp/servers -H "Authorization: Bearer $T" -H 'content-type: application/json' \
+     -d '{"transport":"remote","name":"GHOST","slug":"ghost","endpoint":"https://<ghost-host>/mcp","remoteTransport":"streamable-http","headers":{"Authorization":"Bearer <owner_token>"},"authenticationTemplate":[{"kind":"none"}]}'
+     # -> {"slug":"ghost"}
+   curl -s -X POST $EXEC/api/connections -H "Authorization: Bearer $T" -H 'content-type: application/json' \
+     -d '{"owner":"org","name":"default","integration":"ghost","template":"none","value":""}'
+     # -> {"address":"tools.ghost.org.default", ...}
+   ```
+   After this, GHOST's tools appear in Executor as `tools.ghost.org.default.<tool>`. An example is `tools.ghost.org.default.search_capabilities`.
 5. Point your coding agent at Executor. This is the documented command; the header is needed by the local daemon:
    ```bash
    npx add-mcp http://127.0.0.1:4788/mcp --transport http --name executor \
@@ -286,11 +316,22 @@ You can also skip Executor and connect directly: `npx add-mcp https://<ghost-hos
 - `EXECUTOR_MCP_URL` is required for (a).
 - Optional: `EXECUTOR_TOKEN`, `GHOST_MCP_SERVERS`, `PARTNERS_ALLOWED_PRINCIPALS`.
 
-**What was verified:**
-- (a) **Verified live**, but against GHOST's own `/mcp` (a real Streamable HTTP MCP server with bearer auth) registered through `GHOST_MCP_SERVERS`, not against Executor. Verified behaviour:
-  - tools/list returned 12 tools;
-  - tools/call worked with both a qualified and a bare name;
-  - an unknown tool returned 404;
-  - an unreachable server and a wrong token were reported per server.
-- (a) **Not exercised:** the SSE fallback, and a real Executor instance.
-- (b) Steps 1–5 come from Executor's docs and source (executor.sh/docs, `apps/local/src/auth.ts`, `packages/plugins/mcp`, `mcp-install-card.tsx`) at commit `98d606b`, Sep 30 2026. **We have not run Executor end to end.**
+**What was verified (Oct 4), against Executor 1.6.10 (`executor web --foreground`, local, bearer token):**
+- (a) The bridge connected over Streamable HTTP.
+  - Default mode listed 7 tools: `execute, skills, resume, create-artifact, edit-artifact, list-artifacts, show-artifact`.
+  - `?mode=passthrough&artifacts=false` listed 4 tools: `integrations, search, invoke, skills`.
+  - `integrations` and `search` calls returned results (`structuredContent` is passed through).
+- (b) GHOST's `/mcp` (in-memory coordinator) was registered in Executor with the API sequence above. Then, through the bridge:
+  1. `search {query:"search capabilities camera"}` returned `tools.ghost.org.default.search_capabilities` with GHOST's input schema.
+  2. `invoke {tool, arguments:{q:"golden gate"}}` returned GHOST's catalog hit (the Exa/Kernel webcam candidate).
+
+  This is the full path a coding agent takes: MCP client → Executor → GHOST.
+- The bridge was also tested in the check script against GHOST's own `/mcp` through `GHOST_MCP_SERVERS`:
+  - qualified and bare names;
+  - an unknown tool returning 404;
+  - an unreachable server and a wrong token being reported per server.
+- **Not exercised:**
+  - the SSE fallback;
+  - the `add-mcp` command for Claude Code, Cursor or Codex (step 5, taken from Executor's docs);
+  - Executor's approval flow (`resume`);
+  - the Executor web UI. Steps 2–3 there follow the UI source, but we used the API.
