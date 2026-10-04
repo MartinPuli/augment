@@ -29,7 +29,7 @@ export default function Home() {
     if (s.running || s.activity === "speaking") return;
     s.set({ mood: "surprised" });
     setTimeout(() => useGhost.getState().set({ mood: "happy" }), 500);
-    listener?.start("ptt", (t) => void sendToPolty(t));
+    listener?.start("tap", (t) => void sendToPolty(t));
   };
 
   return (
@@ -78,6 +78,7 @@ function useCoordinatorSync() {
     let alive = true;
     const set = useGhost.getState().set;
     void speaker?.detect();
+    void listener?.detect();
 
     // /me creates the session cookie; everything else waits for it.
     ghost<{ principal_id: string; owner_token: string; balance_cents: number; display_name: string }>("/me")

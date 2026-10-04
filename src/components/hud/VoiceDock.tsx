@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { ArrowUp, Keyboard, Mic, MessagesSquare, Square, Waves } from "lucide-react";
 import { levels, useGhost } from "@/lib/store";
 import { cancelRun, sendToPolty } from "@/lib/agent/runtime";
-import { listener } from "@/lib/voice/listener";
+import { listener, type ListenMode } from "@/lib/voice/listener";
 import { speaker } from "@/lib/voice/speaker";
 
 /**
@@ -30,7 +30,7 @@ export function VoiceDock() {
   }, []);
 
   const startListening = useCallback(
-    (mode: "ptt" | "handsfree") => {
+    (mode: ListenMode) => {
       speaker?.unlock();
       speaker?.stop();
       if (running) cancelRun();
@@ -50,7 +50,7 @@ export function VoiceDock() {
     else if (listener?.listening) {
       listener.stop();
       useGhost.getState().set({ handsFree: false });
-    } else startListening("ptt");
+    } else startListening("tap");
   }, [startListening]);
 
   const toggleHandsFree = () => {

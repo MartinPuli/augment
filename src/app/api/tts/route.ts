@@ -3,9 +3,10 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
 
-/** GET: is premium voice configured? (lets the browser pick ElevenLabs vs. the built-in voice) */
+/** GET: is ElevenLabs configured? (picks voice output and speech-to-text engines in the browser) */
 export async function GET() {
-  return Response.json({ provider: process.env.ELEVENLABS_API_KEY ? "elevenlabs" : "browser" });
+  const el = !!process.env.ELEVENLABS_API_KEY;
+  return Response.json({ provider: el ? "elevenlabs" : "browser", stt: el ? "elevenlabs" : "browser" });
 }
 
 /**
