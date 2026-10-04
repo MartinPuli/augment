@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/*
+ * GHOST design tokens.
+ * Charcoal world, ivory ghost, mint = confirmed access, amber = waiting, coral = stopped/failed,
+ * violet = the agent's thought. State is always also communicated through text and shape.
+ */
+@theme {
+  --color-ink: #0a0b0e;
+  --color-ink-2: #111318;
+  --color-ink-3: #181b22;
+  --color-ink-4: #22262f;
+  --color-line: rgb(244 239 228 / 0.09);
+  --color-line-strong: rgb(244 239 228 / 0.18);
+  --color-ivory: #f4efe4;
+  --color-ivory-dim: #c9c4b8;
+  --color-mute: #8a877f;
+  --color-mint: #5df2b5;
+  --color-mint-deep: #1f8f68;
+  --color-amber: #ffb547;
+  --color-coral: #ff6b5e;
+  --color-violet: #a99bff;
+
+  --font-display: var(--font-unbounded), ui-sans-serif, system-ui;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-blink-caret: blink-caret 1s steps(2) infinite;
+  --animate-scan: scan 2.4s linear infinite;
+  --animate-pulse-ring: pulse-ring 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes blink-caret {
+    to {
+      visibility: hidden;
+    }
+  }
+  @keyframes scan {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.8);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(2.2);
+      opacity: 0;
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-ivory);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-mint) 35%, transparent);
+  color: var(--color-ivory);
+}
+
+/* Thin, quiet scrollbars inside widgets */
+.ghost-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-4) transparent;
+}
+
+/* Glass card used by widget frames and panels */
+.ghost-glass {
+  background: linear-gradient(180deg, rgb(24 27 34 / 0.86), rgb(17 19 24 / 0.9));
+  border: 1px solid var(--color-line);
+  box-shadow:
+    0 1px 0 0 rgb(244 239 228 / 0.05) inset,
+    0 24px 60px -24px rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+/* Tiny uppercase HUD label */
+.hud-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
