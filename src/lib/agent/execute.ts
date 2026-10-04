@@ -134,6 +134,33 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
         return ok({ count: hits.length, results: hits.map(compactHit), widget_id: hits.length ? "search" : undefined });
       }
 
+      case "observe_now": {
+        // One step: search, pick the best free (public or own) online capability, use it.
+        const qs = new URLSearchParams({ q: String(input.query), limit: "8", only_online: "1" });
+        if (input.semantic_type) qs.set("semantic_type", String(input.semantic_type));
+        const near = input.near as { lat: number; lon: number; radius_km?: number } | undefined;
+        if (near) {
+          qs.set("near", `${near.lat},${near.lon}`);
+          if (near.radius_km) qs.set("radius_km", String(near.radius_km));
+        }
+        const hits = await ghost<CapabilityHit[]>(`/capabilities?${qs}`);
+        const free = hits.filter(
+          (h) => (h.device.access_type === "public_observation" || h.device.access_type === "own_device" || h.terms.price_cents === 0) && h.capability.kind !== "act",
+        );
+        const pick = free[0];
+        if (!pick) {
+          return ok({
+            note: hits.length ? "No free capability matched; these need a lease (quote_lease) or a different query." : "Nothing matched.",
+            candidates: hits.slice(0, 6).map(compactHit),
+          });
+        }
+        const res = await executeTool("invoke_capability", { ref: pick.ref, arguments: (input.arguments as Record<string, unknown>) ?? {} }, toolUseId, signal);
+        const alternatives = free.slice(1, 4).map((h) => ({ ref: h.ref, device: h.device.name, capability: h.capability.title }));
+        const head = { used: compactHit(pick), alternatives };
+        if (typeof res.content === "string") return { content: `${j(head)}\n${res.content}`, isError: res.isError };
+        return { content: [{ type: "text", text: j(head) }, ...res.content], isError: res.isError };
+      }
+
       case "get_device": {
         const d = await ghost<Device>(`/devices/${encodeURIComponent(String(input.device_id))}`);
         return ok({

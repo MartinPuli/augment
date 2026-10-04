@@ -9,7 +9,11 @@ import Anthropic from "@anthropic-ai/sdk";
  * Fallback: the default Anthropic credential resolution (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN,
  * or an `ant auth login` profile).
  */
-export function createClaudeClient(): { client: Anthropic; provider: "anthropic" | "neon-ai-gateway" } {
+export function createClaudeClient(opts: { preferDirect?: boolean } = {}): { client: Anthropic; provider: "anthropic" | "neon-ai-gateway" } {
+  // The low-latency voice path can skip the gateway hop when a direct key is available.
+  if (opts.preferDirect && process.env.ANTHROPIC_API_KEY && process.env.GHOST_FAST_VIA_GATEWAY !== "1") {
+    return { provider: "anthropic", client: new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) };
+  }
   const base = process.env.NEON_AI_GATEWAY_BASE_URL || process.env.NEON_AI_GATEWAY_URL;
   const token = process.env.NEON_AI_GATEWAY_TOKEN || process.env.NEON_AI_GATEWAY_KEY;
   if (base && token) {

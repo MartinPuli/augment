@@ -79,6 +79,8 @@ interface GhostState {
   drawer: boolean;
   handsFree: boolean;
   voiceProvider: "elevenlabs" | "browser" | "unknown";
+  /** "fast" = Claude Haiku 4.5 (low latency, default for voice); "deep" = Claude Opus 5.5 (hard tasks). */
+  brain: "fast" | "deep";
   error: string | null;
 
   set: (patch: Partial<GhostState>) => void;
@@ -109,6 +111,7 @@ export const useGhost = create<GhostState>((set, get) => ({
   drawer: false,
   handsFree: false,
   voiceProvider: "unknown",
+  brain: "fast",
   error: null,
 
   set: (patch) => set(patch),

@@ -16,7 +16,7 @@ import { levels, useGhost } from "@/lib/store";
  * - "handsfree": like tap, then the dock restarts listening after Polty finishes speaking.
  */
 export type ListenMode = "tap" | "ptt" | "handsfree";
-type Engine = "elevenlabs" | "webspeech";
+type Engine = "realtime" | "elevenlabs" | "webspeech";
 
 const S = () => useGhost.getState();
 
@@ -78,6 +78,18 @@ class Listener {
   private heardSpeech = false;
   private segmentStart = 0;
 
+  // realtime engine (ElevenLabs Scribe v2 Realtime over WebSocket)
+  private rt: {
+    ws: WebSocket | null;
+    node: AudioWorkletNode | null;
+    pending: string[]; // base64 chunks captured before the socket opened
+    committed: string[];
+    partial: string;
+    timers: ReturnType<typeof setTimeout>[];
+    finishing: boolean;
+  } | null = null;
+  private tokenPromise: Promise<{ token: string; language_code: string; keyterms: string[] } | null> | null = null;
+
   // webspeech engine
   private rec: SR | null = null;
   private finalText = "";
@@ -94,7 +106,15 @@ class Listener {
     try {
       const r = await fetch("/api/tts");
       const j = await r.json();
-      this.engine = j.stt === "elevenlabs" && typeof MediaRecorder !== "undefined" ? "elevenlabs" : "webspeech";
+      this.engine =
+        j.stt === "elevenlabs"
+          ? typeof AudioWorkletNode !== "undefined" && typeof WebSocket !== "undefined"
+            ? "realtime"
+            : typeof MediaRecorder !== "undefined"
+              ? "elevenlabs"
+              : "webspeech"
+          : "webspeech";
+      if (this.engine === "realtime") void this.prefetchToken();
     } catch {
       this.engine = "webspeech";
     }
@@ -118,7 +138,8 @@ class Listener {
     void (async () => {
       const engine = await this.detect();
       if (my !== this.session) return;
-      if (engine === "elevenlabs") await this.startRecorder(my);
+      if (engine === "realtime") await this.startRealtime(my);
+      else if (engine === "elevenlabs") await this.startRecorder(my);
       else this.startWebSpeech(my);
     })();
     return true;
@@ -127,6 +148,10 @@ class Listener {
   /** Release (push-to-talk) or second tap: send what was heard now. */
   finish() {
     if (!this.active) return;
+    if (this.rt) {
+      this.rtFinish();
+      return;
+    }
     if (this.engine === "elevenlabs" && this.recorder) {
       this.endSegment(true);
       return;
@@ -141,6 +166,7 @@ class Listener {
   stop() {
     this.session++;
     this.active = false;
+    this.rtClose();
     if (this.sendTimer) clearTimeout(this.sendTimer);
     if (this.rec) {
       this.rec.onend = null;
@@ -212,6 +238,194 @@ class Listener {
   private fail(message: string) {
     this.stop();
     S().set({ error: message, caption: null });
+  }
+
+  /* ---------------------------- Realtime engine ---------------------------- */
+
+  private prefetchToken() {
+    this.tokenPromise = fetch("/api/stt-token", { method: "POST" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    return this.tokenPromise;
+  }
+
+  private async startRealtime(my: number) {
+    const stream = await this.openMic(my);
+    if (!stream || my !== this.session) return;
+    // 16 kHz context: the browser resamples the mic for us.
+    let ctx: AudioContext;
+    try {
+      if (this.ctx) void this.ctx.close().catch(() => {});
+      ctx = new AudioContext({ sampleRate: 16000 });
+      this.ctx = ctx;
+      void ctx.resume();
+    } catch {
+      this.engine = "elevenlabs";
+      return this.startRecorder(my);
+    }
+    const formats = [16000, 22050, 24000, 44100, 48000];
+    if (!formats.includes(ctx.sampleRate)) {
+      this.engine = "elevenlabs";
+      return this.startRecorder(my);
+    }
+    const rt: NonNullable<Listener["rt"]> = { ws: null, node: null, pending: [], committed: [], partial: "", timers: [], finishing: false };
+    this.rt = rt;
+
+    // Capture: AudioWorklet -> PCM16 chunks of 100 ms, base64-encoded.
+    try {
+      const code = `class P extends AudioWorkletProcessor{constructor(){super();this.b=new Int16Array(${Math.round(ctx.sampleRate / 10)});this.n=0}process(i){const c=i[0]&&i[0][0];if(c){for(let k=0;k<c.length;k++){let s=c[k];s=s<-1?-1:s>1?1:s;this.b[this.n++]=s<0?s*32768:s*32767;if(this.n===this.b.length){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}registerProcessor("ghost-pcm16",P);`;
+      const url = URL.createObjectURL(new Blob([code], { type: "application/javascript" }));
+      await ctx.audioWorklet.addModule(url);
+      URL.revokeObjectURL(url);
+    } catch {
+      this.rt = null;
+      this.engine = "elevenlabs";
+      return this.startRecorder(my);
+    }
+    if (my !== this.session) return;
+    const src = ctx.createMediaStreamSource(stream);
+    const node = new AudioWorkletNode(ctx, "ghost-pcm16");
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    src.connect(node);
+    src.connect(analyser);
+    rt.node = node;
+    node.port.onmessage = (e: MessageEvent<Int16Array>) => {
+      if (my !== this.session) return;
+      const b64 = int16ToBase64(e.data);
+      if (rt.ws?.readyState === WebSocket.OPEN) rt.ws.send(JSON.stringify({ message_type: "input_audio_chunk", audio_base_64: b64, commit: false, sample_rate: ctx.sampleRate }));
+      else if (rt.pending.length < 80) rt.pending.push(b64);
+    };
+
+    // Level meter.
+    const buf = new Float32Array(analyser.fftSize);
+    const tick = () => {
+      if (my !== this.session) return;
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      levels.mic = Math.min(1, levels.mic * 0.6 + Math.min(1, Math.sqrt(sum / buf.length) * 9) * 0.4);
+      this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+
+    // Socket (token was prefetched; fetch the next one in the background).
+    const tok = (await (this.tokenPromise ?? this.prefetchToken())) ?? (await this.prefetchToken());
+    this.tokenPromise = null;
+    void this.prefetchToken();
+    if (my !== this.session) return;
+    if (!tok?.token) {
+      this.rtClose();
+      this.engine = "elevenlabs";
+      return this.startRecorder(my);
+    }
+    const qs = new URLSearchParams({
+      model_id: "scribe_v2_realtime",
+      token: tok.token,
+      audio_format: `pcm_${ctx.sampleRate}`,
+      commit_strategy: "vad",
+      vad_silence_threshold_secs: this.mode === "handsfree" ? "0.6" : "0.55",
+    });
+    if (tok.language_code) qs.set("language_code", tok.language_code);
+    for (const k of tok.keyterms ?? []) qs.append("keyterms", k);
+    const ws = new WebSocket(`wss://api.elevenlabs.io/v1/speech-to-text/realtime?${qs}`);
+    rt.ws = ws;
+    ws.onopen = () => {
+      for (const b64 of rt.pending.splice(0)) ws.send(JSON.stringify({ message_type: "input_audio_chunk", audio_base_64: b64, commit: false, sample_rate: ctx.sampleRate }));
+    };
+    ws.onmessage = (ev) => {
+      if (my !== this.session) return;
+      let m: { message_type?: string; text?: string; error?: string };
+      try {
+        m = JSON.parse(String(ev.data));
+      } catch {
+        return;
+      }
+      if (m.message_type === "partial_transcript") {
+        rt.partial = m.text ?? "";
+        const text = [...rt.committed, rt.partial].join(" ").trim();
+        if (text) S().set({ caption: { who: "user", text, interim: true } });
+      } else if (m.message_type === "committed_transcript") {
+        const t = (m.text ?? "").trim();
+        rt.partial = "";
+        if (t) rt.committed.push(t);
+        // Tap / hands-free: one utterance per session — deliver as soon as the server commits it.
+        if (t && (this.mode !== "ptt" || rt.finishing)) this.rtDeliver(my);
+      } else if (m.message_type && /error|exceeded|limited|overflow|exhausted|unaccepted/.test(m.message_type)) {
+        const text = [...rt.committed, rt.partial].join(" ").trim();
+        if (text) return this.rtDeliver(my);
+        this.fail(`Voice transcription error (${m.message_type}${m.error ? `: ${m.error}` : ""}).`);
+      }
+    };
+    ws.onerror = () => {
+      if (my !== this.session) return;
+      const text = [...rt.committed, rt.partial].join(" ").trim();
+      if (text) return this.rtDeliver(my);
+      // Fall back to upload-based transcription for this session.
+      this.rtClose();
+      this.engine = "elevenlabs";
+      void this.startRecorder(my);
+    };
+    // Tap mode: give up politely if nothing is said.
+    if (this.mode === "tap") {
+      rt.timers.push(
+        setTimeout(() => {
+          if (my !== this.session || rt.committed.length || rt.partial) return;
+          this.stop();
+          S().set({ caption: { who: "user", text: "I didn't hear anything — tap the mic and speak." } });
+        }, 12_000),
+      );
+    }
+    rt.timers.push(setTimeout(() => my === this.session && this.rtFinish(), 45_000));
+  }
+
+  /** Push-to-talk release / second tap: flush and take what we have. */
+  private rtFinish() {
+    const rt = this.rt;
+    if (!rt) return;
+    const my = this.session;
+    rt.finishing = true;
+    try {
+      rt.ws?.send(JSON.stringify({ message_type: "input_audio_chunk", audio_base_64: "", commit: true, sample_rate: this.ctx?.sampleRate ?? 16000 }));
+    } catch {
+      /* socket not open */
+    }
+    // If the server doesn't commit quickly, use the latest partial.
+    rt.timers.push(setTimeout(() => my === this.session && this.rtDeliver(my), 900));
+  }
+
+  private rtDeliver(my: number) {
+    const rt = this.rt;
+    if (!rt || my !== this.session) return;
+    const text = [...rt.committed, rt.partial].join(" ").replace(/\s+/g, " ").trim();
+    const onUtterance = this.onUtterance;
+    this.stop();
+    if (text) onUtterance?.(text);
+    else S().set({ caption: { who: "user", text: "I couldn't make that out — try again?" } });
+  }
+
+  private rtClose() {
+    const rt = this.rt;
+    if (!rt) return;
+    this.rt = null;
+    rt.timers.forEach(clearTimeout);
+    if (rt.node) {
+      rt.node.port.onmessage = null;
+      try {
+        rt.node.disconnect();
+      } catch {
+        /* ignore */
+      }
+    }
+    if (rt.ws) {
+      rt.ws.onmessage = null;
+      rt.ws.onerror = null;
+      try {
+        rt.ws.close();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   /* ---------------------------- ElevenLabs engine ---------------------------- */
@@ -412,6 +626,13 @@ class Listener {
       this.onUtterance?.(text);
     }, 900);
   }
+}
+
+function int16ToBase64(a: Int16Array): string {
+  const bytes = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
 }
 
 async function transcribe(blob: Blob): Promise<string> {

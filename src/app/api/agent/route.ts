@@ -20,7 +20,7 @@ type Effort = "low" | "medium" | "high" | "xhigh" | "max";
  *   {t:"error", message, code}
  */
 export async function POST(req: Request) {
-  let body: { messages?: Anthropic.Beta.BetaMessageParam[] };
+  let body: { messages?: Anthropic.Beta.BetaMessageParam[]; brain?: "fast" | "deep" };
   try {
     body = await req.json();
   } catch {
@@ -31,12 +31,16 @@ export async function POST(req: Request) {
     return Response.json({ error: "messages required" }, { status: 400 });
   }
 
-  const { client, provider } = createClaudeClient();
-  const model = process.env.GHOST_MODEL || "claude-opus-5-5";
+  // Two brains: "fast" (default for voice) and "deep" (multi-step physical tasks).
+  const brain = body.brain === "deep" ? "deep" : "fast";
+  const model = brain === "deep" ? process.env.GHOST_MODEL || "claude-opus-5-5" : process.env.GHOST_FAST_MODEL || "claude-haiku-4-5";
   const effort = (process.env.GHOST_EFFORT || "low") as Effort;
+  // Haiku 4.5 takes neither adaptive thinking nor `effort`; it runs without extended thinking.
+  const isHaiku = model.startsWith("claude-haiku-4");
+  const { client, provider } = createClaudeClient({ preferDirect: brain === "fast" });
   // Server-side refusal fallback is a Claude API feature; skip it behind a gateway.
-  const useFallbacks = provider === "anthropic" && process.env.GHOST_FALLBACKS !== "0";
-  const fast = provider === "anthropic" && process.env.GHOST_FAST_MODE === "1";
+  const useFallbacks = provider === "anthropic" && !isHaiku && process.env.GHOST_FALLBACKS !== "0";
+  const fast = provider === "anthropic" && !isHaiku && process.env.GHOST_FAST_MODE === "1";
 
   const betas: Anthropic.Beta.AnthropicBeta[] = [];
   if (useFallbacks) betas.push("server-side-fallback-2026-07-01");
@@ -52,9 +56,8 @@ export async function POST(req: Request) {
           max_tokens: 16000,
           system: [{ type: "text" as const, text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" as const } }],
           tools: TOOL_DEFS.map((t) => ({ ...t, eager_input_streaming: true })),
-          thinking: { type: "adaptive" as const },
-          output_config: { effort },
           cache_control: { type: "ephemeral" as const },
+          ...(isHaiku ? {} : { thinking: { type: "adaptive" as const }, output_config: { effort } }),
         };
         // Through Neon AI Gateway use the standard Messages endpoint (no beta-only features);
         // direct to Anthropic, opt into server-side refusal fallbacks (and optional fast mode).

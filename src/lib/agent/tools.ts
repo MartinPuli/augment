@@ -46,6 +46,25 @@ export const TOOL_DEFS: ToolDef[] = [
     },
   },
   {
+    name: "observe_now",
+    description:
+      "Fast path, one step: find the best free capability (public sensor/camera or the user's own device) matching the request and use it immediately — e.g. 'tide San Francisco', 'Bay Bridge camera live', 'my phone camera'. Shows the result on the canvas and returns it (images come back to you). Prefer this over search_capabilities + invoke_capability for simple readings, photos and live views. For paid/shared devices it returns candidates instead (then use quote_lease).",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "What to observe, including place, e.g. 'water level San Francisco', 'live camera Bay Bridge'." },
+        semantic_type: { type: "string", description: "Optional, e.g. water_level.read, video.live, image.observe, camera.snapshot." },
+        near: {
+          type: "object",
+          properties: { lat: { type: "number" }, lon: { type: "number" }, radius_km: { type: "number" } },
+          required: ["lat", "lon"],
+        },
+        arguments: { type: "object", description: "Optional arguments for the chosen capability." },
+      },
+      required: ["query"],
+    },
+  },
+  {
     name: "get_device",
     description: "Get full details for one device: capabilities with input schemas, terms, zone, online state, provenance.",
     input_schema: {
@@ -281,6 +300,7 @@ export const TOOL_NAMES = new Set(TOOL_DEFS.map((t) => t.name));
 /** Short human labels for the UI while a tool runs. */
 export const TOOL_LABELS: Record<string, string> = {
   search_capabilities: "Searching capabilities",
+  observe_now: "Observing",
   get_device: "Inspecting device",
   quote_lease: "Requesting access",
   accept_quote: "Accepting offer",

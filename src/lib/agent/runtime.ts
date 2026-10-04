@@ -240,7 +240,7 @@ async function streamTurn(
     res = await fetch("/api/agent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ messages, brain: useGhost.getState().brain }),
       signal,
     });
   } catch (e) {
