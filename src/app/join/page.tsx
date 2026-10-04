@@ -10,20 +10,25 @@
  * 4. "Possessed" mode: while Polty uses a capability the screen says exactly what it is doing,
  *    and a huge Stop button unpublishes everything and closes every camera/mic track.
  */
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Activity,
+  ArrowRight,
   BatteryMedium,
   Camera,
   Check,
   CircleStop,
   Compass,
   Flashlight,
+  KeyRound,
   Lock,
   LoaderCircle,
   MapPin,
   Mic,
+  Pause,
   RefreshCw,
+  SatelliteDish,
+  SlidersHorizontal,
   Smartphone,
   TriangleAlert,
   Vibrate,
@@ -31,9 +36,12 @@ import {
   Wifi,
   WifiOff,
   X,
-} from "lucide-react";
+} from "lucide";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Icon, type IconNode } from "@/components/ui/Icon";
+import { Illustration } from "@/components/ui/Illustration";
+import { duration, ease, haptic, spring } from "@/components/ui/motion";
 import { GhostConnector } from "@/lib/connector/client";
 import { composeDevice } from "@/lib/connector/compose";
 import { deviceChannelUrl } from "@/lib/connector/http";
@@ -62,7 +70,7 @@ type Support = { supported: boolean; reason?: string };
 const PHONE_KEY = "phone";
 const CRED_KEY = "ghost.connector.phone-browser.credential";
 
-const SENSORS: { id: SensorId; label: string; blurb: string; icon: ComponentType<{ className?: string }> }[] = [
+const SENSORS: { id: SensorId; label: string; blurb: string; icon: IconNode }[] = [
   { id: "camera", label: "Camera", blurb: "Photos and a live view from the rear camera", icon: Camera },
   { id: "microphone", label: "Microphone", blurb: "Sound level, short clips (≤10 s)", icon: Mic },
   { id: "speaker", label: "Speaker", blurb: "Say short phrases, play chimes", icon: Volume2 },
@@ -368,6 +376,7 @@ export default function JoinPage() {
         modulesRef.current.get(id)?.dispose?.();
         modulesRef.current.set(id, mod);
         setSensors((s) => ({ ...s, [id]: "on" }));
+        haptic(10); // with the bouncy "Shared" pill: one confirmation, felt and seen
         republish();
       },
       (e) => {
@@ -444,16 +453,20 @@ export default function JoinPage() {
   /* ---------------- render ---------------- */
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-ink text-ivory">
+    <main className="relative min-h-dvh overflow-clip text-fg">
       <Backdrop possessed={possessed} />
       <div
-        className="relative z-10 mx-auto flex min-h-dvh w-full max-w-md flex-col px-5"
-        style={{ paddingTop: "max(env(safe-area-inset-top), 18px)", paddingBottom: "max(env(safe-area-inset-bottom), 18px)" }}
+        className="relative z-10 mx-auto flex min-h-dvh w-full max-w-[440px] flex-col"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 12px)",
+          paddingLeft: "max(env(safe-area-inset-left), 16px)",
+          paddingRight: "max(env(safe-area-inset-right), 16px)",
+        }}
       >
-        <header className="flex items-center justify-between py-2">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-[15px] font-extrabold tracking-[0.18em]">GHOST</span>
-            <span className="hud-label">phone link</span>
+        <header className="flex h-12 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="font-display text-heading tracking-[0.14em]">GHOST</span>
+            <span className="truncate text-caption text-fg-3">Phone link</span>
           </div>
           {boot === "connector" && <ConnChip status={status} />}
         </header>
@@ -462,59 +475,65 @@ export default function JoinPage() {
 
         <AnimatePresence mode="wait">
           {boot === "loading" && (
-            <motion.section key="loading" className="flex flex-1 items-center justify-center" exit={{ opacity: 0 }}>
-              <Ghost mood="waiting" size={120} />
-            </motion.section>
+            <Panel key="loading">
+              <Ghost mood="waiting" size={112} className="mx-auto" />
+            </Panel>
           )}
 
           {boot === "no-code" && (
-            <Panel key="no-code">
-              <Ghost mood="idle" size={132} className="mx-auto" />
-              <h1 className="mt-6 text-center font-display text-2xl font-semibold leading-tight">Pair this phone with GHOST</h1>
-              <p className="mt-3 text-center text-[15px] leading-relaxed text-ivory-dim">
-                On your computer, open GHOST and choose <b className="text-ivory">Pair a phone</b>. Scan the QR code with this phone&apos;s
-                camera — or type the 6-character code here.
-              </p>
-              <form
-                className="mt-6 flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const code = manualCode.trim().toUpperCase();
-                  if (code.length >= 4) startConnector(code);
-                }}
-              >
-                <input
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 12))}
-                  placeholder="ABC123"
-                  autoCapitalize="characters"
-                  autoComplete="one-time-code"
-                  inputMode="text"
-                  aria-label="Pairing code"
-                  className="min-w-0 flex-1 rounded-2xl border border-line-strong bg-ink-3 px-4 py-3.5 text-center font-mono text-xl tracking-[0.35em] text-ivory outline-none placeholder:text-mute/50 focus:border-mint/60"
-                />
-                <button
-                  type="submit"
-                  disabled={manualCode.trim().length < 4}
-                  className="rounded-2xl bg-mint px-5 font-semibold text-ink transition active:scale-95 disabled:opacity-30"
+            <Panel
+              key="no-code"
+              footer={
+                <form
+                  className="flex flex-col gap-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const code = manualCode.trim().toUpperCase();
+                    if (code.length >= 4) startConnector(code);
+                  }}
                 >
-                  Pair
-                </button>
-              </form>
+                  <input
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 12))}
+                    placeholder="ABC123"
+                    autoCapitalize="characters"
+                    autoComplete="one-time-code"
+                    inputMode="text"
+                    enterKeyHint="go"
+                    aria-label="Pairing code"
+                    className="h-14 w-full rounded-tile bg-surface px-4 text-center font-mono text-title uppercase tracking-[0.3em] text-fg shadow-card outline-none ring-1 ring-inset ring-line-strong transition-shadow duration-150 placeholder:text-fg-3/40 focus:ring-2 focus:ring-mint/50"
+                  />
+                  <button type="submit" disabled={manualCode.trim().length < 4} className={clsx(BTN_PRIMARY, "h-14 w-full text-body-lg")}>
+                    Pair
+                    <Icon icon={ArrowRight} size={18} strokeWidth={2.1} />
+                  </button>
+                </form>
+              }
+            >
+              <Illustration name="phone" size={104} fallback={Smartphone} priority className="mx-auto" />
+              <h1 className="mt-6 text-center font-display text-title">Pair this phone</h1>
+              <p className="mx-auto mt-3 max-w-[34ch] text-center text-body text-fg-2">
+                On your computer, open GHOST and choose <span className="font-medium text-fg">Pair a phone</span>. Scan the QR code with
+                this phone&apos;s camera, or type the 6-character code below.
+              </p>
             </Panel>
           )}
 
           {boot === "connector" && !welcomed && status !== "error" && (
             <Panel key="pending">
-              <div className="relative mx-auto mt-4 flex w-fit items-center justify-center">
-                <span className="absolute h-40 w-40 rounded-full border border-amber/40 animate-pulse-ring" />
-                <span className="absolute h-40 w-40 rounded-full border border-amber/25 animate-pulse-ring [animation-delay:0.9s]" />
-                <Ghost mood="waiting" size={140} />
+              <div className="relative mx-auto grid size-44 place-items-center">
+                <span aria-hidden className="absolute inset-6 rounded-full border border-amber/40 animate-pulse-ring" />
+                <span aria-hidden className="absolute inset-6 rounded-full border border-amber/25 animate-pulse-ring [animation-delay:0.9s]" />
+                {status === "pending_confirmation" ? (
+                  <Illustration key="key" name="key" size={112} fallback={KeyRound} priority />
+                ) : (
+                  <Illustration key="phone" name="phone" size={112} fallback={Smartphone} priority />
+                )}
               </div>
-              <h1 className="mt-8 text-center font-display text-[22px] font-semibold leading-tight">
+              <h1 className="mt-8 text-center font-display text-title">
                 {status === "pending_confirmation" ? "Waiting for the owner to confirm…" : "Reaching GHOST…"}
               </h1>
-              <p className="mt-3 text-center text-[15px] leading-relaxed text-ivory-dim">
+              <p className="mx-auto mt-3 max-w-[36ch] text-center text-body text-fg-2">
                 {status === "pending_confirmation"
                   ? `Your computer should now show "${phoneName()}" asking to pair. Tap Confirm there. Nothing on this phone is shared yet.`
                   : status === "reconnecting"
@@ -522,53 +541,95 @@ export default function JoinPage() {
                     : "Opening a secure channel to the coordinator."}
               </p>
               <div className="mt-6 flex justify-center">
-                <span className="inline-flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-amber">
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> {status === "pending_confirmation" ? "awaiting confirmation" : status}
-                </span>
+                <StatusPill tone="amber" icon={LoaderCircle} spin>
+                  {status === "pending_confirmation" ? "Awaiting confirmation" : `${STATUS_LABEL[status]}…`}
+                </StatusPill>
               </div>
             </Panel>
           )}
 
           {boot === "connector" && status === "error" && (
-            <Panel key="error">
-              <Ghost mood="sad" size={120} className="mx-auto" />
-              <h1 className="mt-6 text-center font-display text-xl font-semibold">Couldn&apos;t connect</h1>
-              <p className="mt-3 text-center text-[15px] leading-relaxed text-coral">{snap?.detail ?? "The coordinator refused the connection."}</p>
-              <p className="mt-3 text-center text-sm text-ivory-dim">Ask the owner for a fresh QR code — codes are single-use and expire after 2 minutes.</p>
-              <button
-                onClick={forgetPhone}
-                className="mx-auto mt-6 flex items-center gap-2 rounded-2xl border border-line-strong px-5 py-3 text-sm font-semibold active:scale-95"
-              >
-                <RefreshCw className="h-4 w-4" /> Enter a new code
-              </button>
+            <Panel
+              key="error"
+              footer={
+                <button onClick={forgetPhone} className={clsx(BTN_PRIMARY, "h-14 w-full text-body-lg")}>
+                  <Icon icon={RefreshCw} size={18} strokeWidth={2.1} />
+                  Enter a new code
+                </button>
+              }
+            >
+              <Ghost mood="sad" size={112} className="mx-auto" />
+              <h1 className="mt-6 text-center font-display text-title">Couldn&apos;t connect</h1>
+              <p className="mx-auto mt-3 max-w-[36ch] text-center text-body text-coral">{snap?.detail ?? "The coordinator refused the connection."}</p>
+              <p className="mx-auto mt-2 max-w-[36ch] text-center text-body-sm text-fg-2">
+                Ask the owner for a fresh QR code. Codes are single-use and expire after 2 minutes.
+              </p>
             </Panel>
           )}
 
           {boot === "connector" && welcomed && !published && (
-            <Panel key="setup">
+            <Panel
+              key="setup"
+              align="start"
+              footer={
+                <>
+                  {enabledCount > 0 && status !== "online" && (
+                    <p className="mb-2.5 flex items-center justify-center gap-1.5 text-caption text-amber">
+                      <span className="grid place-items-center animate-spin">
+                        <Icon icon={LoaderCircle} size={12} strokeWidth={2.2} />
+                      </span>
+                      Waiting for the connection to publish
+                    </p>
+                  )}
+                  <button
+                    onClick={publishDevice}
+                    disabled={enabledCount === 0 || status !== "online"}
+                    className={clsx(BTN_PRIMARY, "h-14 w-full text-body-lg")}
+                  >
+                    {enabledCount === 0 ? "Turn on at least one sensor" : `Publish device · ${enabledCount} sensor${enabledCount > 1 ? "s" : ""}`}
+                  </button>
+                  <button
+                    onClick={forgetPhone}
+                    className="mx-auto mt-1 flex h-11 items-center rounded-full px-4 text-body-sm text-fg-3 underline-offset-4 transition-transform duration-100 hover:text-fg hover:underline active:scale-[0.97]"
+                  >
+                    Unpair this phone
+                  </button>
+                </>
+              }
+            >
               <div className="flex items-center gap-4">
-                <Ghost mood="idle" size={74} />
-                <div>
-                  <p className="hud-label text-mint">paired · confirmed</p>
-                  <h1 className="font-display text-xl font-semibold leading-tight">What can Polty borrow?</h1>
-                  <p className="mt-1 text-sm text-ivory-dim">Turn on only what you want to lend. Each one asks your permission first.</p>
+                <Ghost mood="idle" size={60} className="shrink-0" />
+                <div className="min-w-0">
+                  <StatusPill tone="mint" icon={Check}>
+                    Paired and confirmed
+                  </StatusPill>
+                  <h1 className="mt-2 font-display text-title">What can Polty borrow?</h1>
                 </div>
               </div>
+              <p className="mt-3 text-body text-fg-2">Turn on only what you want to lend. Each one asks your permission first.</p>
               {stoppedNote && (
-                <p className="mt-4 rounded-2xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral">{stoppedNote}</p>
+                <p className="mt-4 flex items-start gap-2.5 rounded-tile bg-coral/[0.07] px-4 py-3 text-body-sm text-coral ring-1 ring-inset ring-coral/20">
+                  <Icon icon={CircleStop} size={16} className="mt-0.5 shrink-0" />
+                  {stoppedNote}
+                </p>
               )}
-              <label className="mt-5 block">
-                <span className="hud-label">device name</span>
+              <label className="mt-6 block">
+                <span className="px-1 text-body-sm font-medium text-fg-2">Device name</span>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value.slice(0, 60))}
-                  className="mt-1.5 w-full rounded-xl border border-line bg-ink-3 px-3.5 py-2.5 text-[15px] outline-none focus:border-mint/50"
+                  className="mt-1.5 h-12 w-full rounded-tile bg-surface px-4 text-body-lg text-fg shadow-card outline-none ring-1 ring-inset ring-line transition-shadow duration-150 focus:ring-2 focus:ring-mint/50"
                 />
               </label>
-              <ul className="mt-4 space-y-2">
-                {SENSORS.filter((s) => s.id !== "battery" || support.battery?.supported).map((s) => (
+              <div className="mt-6 flex items-baseline justify-between px-1">
+                <h2 className="text-body-sm font-medium text-fg-2">Sensors</h2>
+                <span className="text-caption tabular-nums text-fg-3">{enabledCount === 0 ? "All off" : `${enabledCount} on`}</span>
+              </div>
+              <ul className="ghost-glass mt-2 space-y-0.5 rounded-card p-1.5">
+                {SENSORS.filter((s) => s.id !== "battery" || support.battery?.supported).map((s, i) => (
                   <SensorRow
                     key={s.id}
+                    index={i}
                     label={s.label}
                     blurb={s.blurb}
                     icon={s.icon}
@@ -579,117 +640,130 @@ export default function JoinPage() {
                   />
                 ))}
               </ul>
-              <div className="sticky bottom-0 -mx-5 mt-5 bg-gradient-to-t from-ink via-ink/95 to-transparent px-5 pb-1 pt-6">
-                <button
-                  onClick={publishDevice}
-                  disabled={enabledCount === 0 || status !== "online"}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-mint py-4 font-display text-[15px] font-semibold text-ink shadow-[0_10px_40px_-10px_rgba(93,242,181,0.6)] transition active:scale-[0.98] disabled:bg-ink-4 disabled:text-mute disabled:shadow-none"
-                >
-                  {enabledCount === 0 ? "Turn on at least one sensor" : `Publish device · ${enabledCount} sensor${enabledCount > 1 ? "s" : ""}`}
-                </button>
-                <button onClick={forgetPhone} className="mx-auto mt-3 block text-xs text-mute underline-offset-4 hover:underline">
-                  Unpair this phone
-                </button>
-              </div>
             </Panel>
           )}
 
           {boot === "connector" && welcomed && published && (
-            <motion.section
-              key="live"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-1 flex-col"
-            >
-              <div className="flex flex-1 flex-col items-center justify-center pt-4 text-center">
-                <Ghost mood={mood} size={possessed ? 210 : 170} />
-                <AnimatePresence mode="wait">
+            <motion.section key="live" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0, transition: spring.gentle }} exit={EXIT} className="flex flex-1 flex-col">
+              <p aria-live="polite" className="sr-only">
+                {activityText ?? ""}
+              </p>
+              <div className="flex flex-1 flex-col items-center justify-center pb-4 pt-6 text-center">
+                <motion.div initial={false} animate={{ scale: possessed ? 1.14 : 1 }} transition={spring.gentle}>
+                  <Ghost mood={mood} size={168} />
+                </motion.div>
+                <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={activityText ?? "idle"}
                     initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className="mt-6 min-h-[88px] px-2"
+                    animate={{ opacity: 1, y: 0, transition: spring.gentle }}
+                    exit={{ opacity: 0, y: -6, transition: { duration: duration.instant, ease: ease.standard } }}
+                    className="mt-7 flex min-h-[116px] flex-col items-center px-2"
                   >
                     {possessed ? (
                       <>
-                        <p className="hud-label text-violet">possessed</p>
-                        <h1 className="mt-1 font-display text-[26px] font-semibold leading-tight text-ivory">{activityText}</h1>
-                        {speaking && <p className="mt-2 text-[15px] italic text-ivory-dim">“{speaking}”</p>}
+                        <StatusPill tone="violet" pulse>
+                          Possessed
+                        </StatusPill>
+                        <h1 className="mt-3 font-display text-title text-fg">{activityText}</h1>
+                        {speaking && <p className="mt-2 max-w-[32ch] font-serif text-body-lg text-fg-2">“{speaking}”</p>}
                       </>
                     ) : (
                       <>
-                        <p className="hud-label text-mint">{hidden ? "paused" : "haunted & ready"}</p>
-                        <h1 className="mt-1 font-display text-[22px] font-semibold leading-tight">
-                          {hidden ? "Paused while the screen is off" : "Polty can borrow this phone"}
-                        </h1>
-                        <p className="mt-2 text-sm text-ivory-dim">Keep this tab open and the screen on. You&apos;ll see here whenever it&apos;s used.</p>
+                        <StatusPill tone={hidden ? "amber" : "mint"} icon={hidden ? Pause : Check}>
+                          {hidden ? "Paused" : "Haunted and ready"}
+                        </StatusPill>
+                        <h1 className="mt-3 font-display text-title">{hidden ? "Paused while the screen is off" : "Polty can borrow this phone"}</h1>
+                        <p className="mt-2 max-w-[34ch] text-body-sm text-fg-2">Keep this tab open and the screen on. You&apos;ll see here whenever it&apos;s used.</p>
                       </>
                     )}
                   </motion.div>
                 </AnimatePresence>
               </div>
 
-              {sensors.camera === "on" && (
-                <CameraPeek module={modulesRef.current.get("camera") as CameraModule | undefined} active={!!current?.capability_id.startsWith("camera") || live.length > 0} />
-              )}
+              <div className="space-y-3">
+                {sensors.camera === "on" && (
+                  <CameraPeek module={modulesRef.current.get("camera") as CameraModule | undefined} active={!!current?.capability_id.startsWith("camera") || live.length > 0} />
+                )}
 
-              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-                {(phoneDevice?.capabilities ?? []).map((c) => {
-                  const busy = active.some((a) => a.capability_id === c.capability_id) || (c.capability_id === "camera.stream" && live.length > 0);
-                  return (
-                    <span
-                      key={c.capability_id}
-                      className={clsx(
-                        "rounded-full border px-2.5 py-1 font-mono text-[10.5px] transition",
-                        busy ? "border-violet/60 bg-violet/15 text-violet" : "border-line bg-ink-3/70 text-ivory-dim",
+                <section className="ghost-glass rounded-card p-4 text-left">
+                  <div className="flex items-center gap-3">
+                    <Illustration name="satellite" size={44} fallback={SatelliteDish} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-body font-medium text-fg">{phoneDevice?.name ?? name}</p>
+                      {phoneDevice?.device_id ? (
+                        <p className="truncate font-mono text-caption text-fg-3">{`device ${phoneDevice.device_id} · ${phoneDevice.status}`}</p>
+                      ) : (
+                        <p className="flex items-center gap-1.5 text-caption text-amber">
+                          <span className="grid place-items-center animate-spin">
+                            <Icon icon={LoaderCircle} size={12} strokeWidth={2.2} />
+                          </span>
+                          Publishing…
+                        </p>
                       )}
-                    >
-                      {busy && <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-violet align-middle" />}
-                      {c.capability_id}
-                    </span>
-                  );
-                })}
+                    </div>
+                  </div>
+
+                  {(phoneDevice?.capabilities.length ?? 0) > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {(phoneDevice?.capabilities ?? []).map((c) => {
+                        const busy = active.some((a) => a.capability_id === c.capability_id) || (c.capability_id === "camera.stream" && live.length > 0);
+                        return (
+                          <span
+                            key={c.capability_id}
+                            className={clsx(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-label transition-colors duration-200",
+                              busy ? "bg-violet/10 text-violet ring-1 ring-inset ring-violet/30" : "bg-tint text-fg-2",
+                            )}
+                          >
+                            {busy && <span className="size-1.5 animate-pulse rounded-full bg-violet" />}
+                            {c.capability_id}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {(snap?.recent.length ?? 0) > 0 && (
+                    <div className="mt-4 border-t border-line pt-3">
+                      <h2 className="text-caption font-medium text-fg-3">Recent</h2>
+                      <ul className="mt-2 space-y-1.5">
+                        {snap!.recent.slice(0, 3).map((r) => (
+                          <li key={r.invocation_id} className="flex items-center justify-between gap-3 text-body-sm">
+                            <span className="flex min-w-0 items-center gap-2 text-fg-2">
+                              <Icon icon={Activity} size={14} className="shrink-0 text-fg-3" />
+                              <span className="truncate">{DONE[r.capability_id] ?? r.capability_id}</span>
+                            </span>
+                            <span
+                              className={clsx(
+                                "shrink-0 text-caption tabular-nums",
+                                r.state === "succeeded" ? "text-mint" : r.state === "rejected" || r.state === "failed" ? "text-coral" : "text-amber",
+                              )}
+                            >
+                              {r.state} · {new Date(r.finished_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </section>
               </div>
-              <p className="mt-2 text-center font-mono text-[10.5px] text-mute">
-                {phoneDevice?.device_id ? `device ${phoneDevice.device_id} · ${phoneDevice.status}` : "publishing…"}
-              </p>
 
-              {(snap?.recent.length ?? 0) > 0 && (
-                <ul className="ghost-glass mt-4 space-y-1 rounded-2xl px-4 py-3">
-                  {snap!.recent.slice(0, 3).map((r) => (
-                    <li key={r.invocation_id} className="flex items-center justify-between gap-3 text-[13px]">
-                      <span className="flex items-center gap-2 text-ivory-dim">
-                        <Activity className="h-3.5 w-3.5 text-mute" />
-                        {DONE[r.capability_id] ?? r.capability_id}
-                      </span>
-                      <span
-                        className={clsx(
-                          "font-mono text-[11px]",
-                          r.state === "succeeded" ? "text-mint" : r.state === "rejected" || r.state === "failed" ? "text-coral" : "text-amber",
-                        )}
-                      >
-                        {r.state} · {new Date(r.finished_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-                <StopButton onStop={stopAccess} />
+              <StickyFooter>
+                <StopButton onStop={stopAccess} possessed={possessed} />
                 <button
                   onClick={() => {
                     publishedRef.current = false;
                     setPublished(false);
                     connRef.current?.unpublish([PHONE_KEY]);
                   }}
-                  className="rounded-2xl border border-line-strong px-4 text-sm font-semibold text-ivory-dim active:scale-95"
+                  className={clsx(BTN_QUIET, "mx-auto mt-2 flex h-11 px-5 text-body-sm")}
                 >
-                  Edit
+                  <Icon icon={SlidersHorizontal} size={16} />
+                  Edit sensors
                 </button>
-              </div>
+              </StickyFooter>
             </motion.section>
           )}
         </AnimatePresence>
@@ -704,40 +778,117 @@ export default function JoinPage() {
 /* Pieces                                                              */
 /* ------------------------------------------------------------------ */
 
-function Panel({ children }: { children: React.ReactNode }) {
+const BTN_BASE =
+  "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-[transform,background-color,opacity] duration-100 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 disabled:shadow-none";
+/** One per screen: the thing to do next. */
+const BTN_PRIMARY = clsx(BTN_BASE, "bg-fg text-fg-inverse shadow-pop hover:bg-fg/85");
+/** Low-emphasis text button (secondary actions under a primary). */
+const BTN_QUIET = clsx(BTN_BASE, "text-fg-2 hover:bg-tint hover:text-fg");
+
+/** Steps leave faster than they arrive. */
+const EXIT = { opacity: 0, y: -8, transition: { duration: duration.fast, ease: ease.standard } };
+
+const STATUS_LABEL: Record<ConnectorSnapshot["status"], string> = {
+  idle: "Idle",
+  connecting: "Connecting",
+  pending_confirmation: "Pending",
+  online: "Online",
+  reconnecting: "Reconnecting",
+  error: "Error",
+  closed: "Closed",
+};
+
+type Tone = "mint" | "amber" | "coral" | "violet" | "neutral";
+const TONE: Record<Tone, string> = {
+  mint: "bg-mint/10 text-mint",
+  amber: "bg-amber/10 text-amber",
+  coral: "bg-coral/10 text-coral",
+  violet: "bg-violet/10 text-violet",
+  neutral: "bg-tint text-fg-3",
+};
+
+/** Sensor state, always as words and color together. */
+const SENSOR_VIEW: Record<SensorState | "unavailable", { text: string; tone: Tone }> = {
+  off: { text: "Off", tone: "neutral" },
+  asking: { text: "Asking…", tone: "amber" },
+  on: { text: "Shared", tone: "mint" },
+  error: { text: "Not shared", tone: "coral" },
+  unavailable: { text: "Unavailable", tone: "neutral" },
+};
+
+/**
+ * A step of the flow: content in the middle (or from the top, for long lists) and its primary
+ * action pinned near the bottom, within thumb reach.
+ */
+function Panel({ children, footer, align = "center" }: { children: React.ReactNode; footer?: React.ReactNode; align?: "center" | "start" }) {
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ type: "spring", stiffness: 220, damping: 26 }}
-      className="flex flex-1 flex-col justify-center py-6"
-    >
-      {children}
+    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0, transition: spring.gentle }} exit={EXIT} className="flex flex-1 flex-col">
+      <div className={clsx("flex flex-1 flex-col py-6", align === "center" && "justify-center")}>{children}</div>
+      {footer ? <StickyFooter>{footer}</StickyFooter> : <div aria-hidden style={{ height: "max(env(safe-area-inset-bottom), 16px)" }} />}
     </motion.section>
   );
 }
 
+/** Bottom action area: stays reachable while the content above scrolls under a soft fade. */
+function StickyFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="sticky bottom-0 z-20 pt-5" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 bg-gradient-to-t from-page via-page/85 to-transparent"
+      />
+      {children}
+    </div>
+  );
+}
+
+function StatusPill({
+  tone,
+  icon,
+  spin,
+  pulse,
+  children,
+}: {
+  tone: Tone;
+  icon?: IconNode;
+  spin?: boolean;
+  pulse?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className={clsx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-medium", TONE[tone])}>
+      {pulse && (
+        <span aria-hidden className="relative flex size-2">
+          <span className="absolute inset-0 animate-ping rounded-full bg-current opacity-60" />
+          <span className="relative size-2 rounded-full bg-current" />
+        </span>
+      )}
+      {icon && (
+        <span className={clsx("grid place-items-center", spin && "animate-spin")}>
+          <Icon icon={icon} size={13} strokeWidth={2.2} spring="snappy" />
+        </span>
+      )}
+      {children}
+    </span>
+  );
+}
+
 function Backdrop({ possessed }: { possessed: boolean }) {
+  const reduce = useReducedMotion();
+  const glow = "absolute left-1/2 top-[30%] size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl";
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
-      <motion.div
-        className="absolute left-1/2 top-[30%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-        animate={{
-          background: possessed
-            ? "radial-gradient(circle, rgba(169,155,255,0.28), rgba(93,242,181,0.12) 45%, transparent 70%)"
-            : "radial-gradient(circle, rgba(93,242,181,0.16), rgba(93,242,181,0.04) 45%, transparent 70%)",
-          scale: possessed ? [1, 1.08, 1] : 1,
-        }}
-        transition={{ duration: possessed ? 1.6 : 0.8, repeat: possessed ? Infinity : 0 }}
-      />
       <div
-        className="absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage: "radial-gradient(rgba(244,239,228,0.9) 1px, transparent 1px)",
-          backgroundSize: "22px 22px",
-          maskImage: "radial-gradient(ellipse at 50% 30%, black, transparent 75%)",
-          WebkitMaskImage: "radial-gradient(ellipse at 50% 30%, black, transparent 75%)",
+        className={clsx(glow, "bg-[radial-gradient(circle,var(--color-mint-glow),transparent_68%)] transition-opacity duration-700")}
+        style={{ opacity: possessed ? 0 : 0.16 }}
+      />
+      <motion.div
+        className={clsx(glow, "bg-[radial-gradient(circle,var(--color-violet-glow),transparent_68%)]")}
+        initial={false}
+        animate={{ opacity: possessed ? 0.34 : 0, scale: possessed && !reduce ? [1, 1.08, 1] : 1 }}
+        transition={{
+          opacity: { duration: duration.deliberate, ease: ease.standard },
+          scale: { duration: 1.6, repeat: possessed && !reduce ? Infinity : 0, ease: "easeInOut" },
         }}
       />
     </div>
@@ -750,99 +901,94 @@ function ConnChip({ status }: { status: ConnectorSnapshot["status"] }) {
   return (
     <span
       className={clsx(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em]",
-        online && "border-mint/30 bg-mint/10 text-mint",
-        waiting && "border-amber/30 bg-amber/10 text-amber",
-        !online && !waiting && "border-coral/30 bg-coral/10 text-coral",
+        "ghost-chip inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-caption font-medium transition-colors duration-200",
+        online ? "text-mint" : waiting ? "text-amber" : "text-coral",
       )}
     >
-      {online ? <Wifi className="h-3 w-3" /> : waiting ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <WifiOff className="h-3 w-3" />}
-      {online ? "online" : status === "pending_confirmation" ? "pending" : status}
+      <span className={clsx("grid place-items-center", waiting && "animate-spin")}>
+        <Icon icon={online ? Wifi : waiting ? LoaderCircle : WifiOff} size={14} strokeWidth={2.2} spring="snappy" />
+      </span>
+      {online ? "Online" : status === "pending_confirmation" ? "Pending" : STATUS_LABEL[status]}
     </span>
   );
 }
 
 function InsecureBanner() {
   return (
-    <div className="mt-2 flex gap-3 rounded-2xl border border-amber/30 bg-amber/10 px-4 py-3 text-[13px] leading-snug text-amber">
-      <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+    <div className="mt-2 flex gap-3 rounded-tile bg-amber/10 px-4 py-3 text-body-sm text-fg-2 ring-1 ring-inset ring-amber/25">
+      <Icon icon={Lock} size={16} className="mt-0.5 shrink-0 text-amber" />
       <p>
-        <b>Not a secure (HTTPS) page.</b> Browsers block the camera, microphone and motion sensors on plain http — a LAN IP like
-        http://192.168.x.x won&apos;t work. Open the GHOST public HTTPS link (Fly.io or tunnel URL) instead.
+        <span className="font-semibold text-amber">Not a secure (HTTPS) page.</span> Browsers block the camera, microphone and motion
+        sensors on plain http, so a LAN IP like <span className="font-mono text-caption">http://192.168.x.x</span> won&apos;t work. Open
+        the GHOST public HTTPS link (Fly.io or tunnel URL) instead.
       </p>
     </div>
   );
 }
 
 function SensorRow(props: {
+  index: number;
   label: string;
   blurb: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconNode;
   state: SensorState;
   error?: string;
   support?: Support;
   onToggle: () => void;
 }) {
-  const { label, blurb, icon: Icon, state, error, support, onToggle } = props;
+  const { index, label, blurb, icon, state, error, support, onToggle } = props;
   const unsupported = support && !support.supported;
   const on = state === "on";
+  const view = SENSOR_VIEW[unsupported ? "unavailable" : state];
   return (
-    <motion.li layout className={clsx("rounded-2xl border bg-ink-2/80 px-3.5 py-3 transition", on ? "border-mint/35" : "border-line")}>
+    <motion.li
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...spring.gentle, delay: index * 0.035, layout: spring.snappy }}
+      className={clsx("rounded-tile transition-colors duration-200", on && "bg-mint/[0.06]", state === "error" && "bg-coral/[0.05]")}
+    >
       <button
         type="button"
         onClick={onToggle}
         disabled={unsupported || state === "asking"}
-        className="flex w-full items-center gap-3 text-left disabled:cursor-not-allowed"
+        className={clsx(
+          "flex min-h-[60px] w-full items-center gap-3 rounded-tile px-3 py-2.5 text-left transition-[transform,background-color] duration-100 active:scale-[0.97] disabled:cursor-not-allowed",
+          !unsupported && state !== "asking" && "hover:bg-tint",
+        )}
         aria-pressed={on}
       >
         <span
           className={clsx(
-            "grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition",
-            on ? "border-mint/40 bg-mint/15 text-mint" : "border-line bg-ink-3 text-ivory-dim",
+            "grid size-10 shrink-0 place-items-center rounded-tile transition-colors duration-200",
+            on ? "bg-mint/10 text-mint" : "bg-surface text-fg-2 ring-1 ring-inset ring-line",
             unsupported && "opacity-40",
           )}
         >
-          <Icon className="h-5 w-5" />
+          <Icon icon={icon} size={20} />
         </span>
-        <span className={clsx("min-w-0 flex-1", unsupported && "opacity-50")}>
-          <span className="flex items-center gap-2 text-[15px] font-semibold">
-            {label}
-            <span
-              className={clsx(
-                "font-mono text-[10px] uppercase tracking-[0.12em]",
-                on ? "text-mint" : state === "asking" ? "text-amber" : state === "error" ? "text-coral" : "text-mute",
-              )}
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className={clsx("text-body font-medium", unsupported ? "text-fg-3" : "text-fg")}>{label}</span>
+            <motion.span
+              key={view.text}
+              initial={on ? { scale: 0.6, opacity: 0 } : { opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={on ? spring.bouncy : { duration: duration.fast, ease: ease.standard }}
+              className={clsx("inline-flex items-center rounded-full px-1.5 py-px text-label font-medium", TONE[view.tone])}
             >
-              {unsupported ? "unavailable" : on ? "shared" : state === "asking" ? "asking…" : state === "error" ? "not shared" : "off"}
-            </span>
+              {view.text}
+            </motion.span>
           </span>
-          <span className="block truncate text-[12.5px] text-mute">{unsupported ? support?.reason : blurb}</span>
+          <span className={clsx("mt-0.5 block text-body-sm text-fg-3", unsupported ? "line-clamp-2" : "truncate")}>
+            {unsupported ? support?.reason : blurb}
+          </span>
         </span>
-        <span
-          className={clsx(
-            "relative h-7 w-12 shrink-0 rounded-full border transition",
-            on ? "border-mint/50 bg-mint/80" : "border-line-strong bg-ink-4",
-            unsupported && "opacity-30",
-          )}
-        >
-          <motion.span
-            className={clsx("absolute top-0.5 grid h-[22px] w-[22px] place-items-center rounded-full", on ? "bg-ink" : "bg-ivory-dim")}
-            animate={{ left: on ? 22 : 2 }}
-            transition={{ type: "spring", stiffness: 500, damping: 32 }}
-          >
-            {state === "asking" ? (
-              <LoaderCircle className="h-3 w-3 animate-spin text-ink" />
-            ) : on ? (
-              <Check className="h-3 w-3 text-mint" />
-            ) : (
-              <X className="h-3 w-3 text-ink/60" />
-            )}
-          </motion.span>
-        </span>
+        <Switch state={unsupported ? "off" : state} dim={unsupported} />
       </button>
       {error && state === "error" && (
-        <p className="mt-2 flex items-start gap-1.5 pl-[52px] text-[12.5px] leading-snug text-coral">
-          <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <p className="flex items-start gap-1.5 pb-2.5 pl-16 pr-3 text-caption text-coral">
+          <Icon icon={TriangleAlert} size={14} className="mt-px shrink-0" />
           {error}
         </p>
       )}
@@ -850,15 +996,68 @@ function SensorRow(props: {
   );
 }
 
-function StopButton({ onStop }: { onStop: () => void }) {
+/** The toggle: its knob slides, and its glyph morphs off (×) → asking (spinner) → on (✓). */
+function Switch({ state, dim }: { state: SensorState; dim?: boolean }) {
+  const on = state === "on";
   return (
-    <motion.button
-      whileTap={{ scale: 0.97 }}
-      onClick={onStop}
-      className="flex items-center justify-center gap-2.5 rounded-2xl border border-coral/40 bg-coral py-[18px] font-display text-[17px] font-semibold text-ink shadow-[0_12px_40px_-12px_rgba(255,107,94,0.7)]"
+    <span
+      aria-hidden
+      className={clsx(
+        "relative h-7 w-12 shrink-0 rounded-full ring-1 ring-inset transition-colors duration-200",
+        on && "bg-mint ring-mint",
+        state === "asking" && "bg-amber/15 ring-amber/30",
+        state === "error" && "bg-coral/10 ring-coral/30",
+        state === "off" && "bg-tint ring-line-strong",
+        dim && "opacity-40",
+      )}
     >
-      <CircleStop className="h-5 w-5" /> Stop access
-    </motion.button>
+      <motion.span
+        className="absolute left-[3px] top-[3px] grid size-[22px] place-items-center rounded-full bg-fg-inverse shadow-pop"
+        initial={false}
+        animate={{ x: on ? 20 : 0 }}
+        transition={spring.snappy}
+      >
+        <span className={clsx("grid place-items-center", state === "asking" && "animate-spin")}>
+          <Icon
+            icon={on ? Check : state === "asking" ? LoaderCircle : state === "error" ? TriangleAlert : X}
+            size={13}
+            strokeWidth={2.4}
+            spring="snappy"
+            className={clsx(on ? "text-mint" : state === "asking" ? "text-amber" : state === "error" ? "text-coral" : "text-fg-3")}
+          />
+        </span>
+      </motion.span>
+    </span>
+  );
+}
+
+function StopButton({ onStop, possessed }: { onStop: () => void; possessed: boolean }) {
+  const reduce = useReducedMotion();
+  return (
+    <div className="relative">
+      {possessed && !reduce && (
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-full bg-coral/30"
+          initial={{ opacity: 0.7, scaleX: 1, scaleY: 1 }}
+          animate={{ opacity: 0, scaleX: 1.04, scaleY: 1.22 }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "easeOut" }}
+        />
+      )}
+      <motion.button
+        type="button"
+        whileTap={{ scale: 0.95 }}
+        transition={spring.snappy}
+        onClick={() => {
+          haptic(18);
+          onStop();
+        }}
+        className="relative flex h-[76px] w-full items-center justify-center gap-3 rounded-full bg-coral text-title font-semibold text-fg-inverse shadow-pop transition-colors duration-150 hover:bg-coral/90"
+      >
+        <Icon icon={CircleStop} size={26} strokeWidth={2.2} />
+        Stop access
+      </motion.button>
+    </div>
   );
 }
 
@@ -875,17 +1074,19 @@ function CameraPeek({ module, active }: { module?: CameraModule; active: boolean
     return module.onStreamChange(attach);
   }, [module]);
   return (
-    <div className="mx-auto mt-2 flex items-center gap-3">
+    <div className="ghost-glass flex items-center gap-3 rounded-card p-2.5 pr-4 text-left">
       <div
         className={clsx(
-          "relative h-[72px] w-[96px] overflow-hidden rounded-xl border bg-ink-3 transition",
-          active ? "border-violet/70 shadow-[0_0_24px_rgba(169,155,255,0.5)]" : "border-line",
+          "relative h-[72px] w-24 shrink-0 overflow-hidden rounded-tile transition-shadow duration-300",
+          active ? "shadow-float ring-2 ring-violet" : "ring-1 ring-line",
         )}
       >
-        <video ref={ref} muted playsInline className="h-full w-full object-cover" />
-        {active && <span className="absolute right-1.5 top-1.5 h-2 w-2 animate-pulse rounded-full bg-coral" />}
+        <div className="ghost-screen absolute inset-0 bg-page">
+          <video ref={ref} muted playsInline className="h-full w-full object-cover" />
+          {active && <span className="absolute right-1.5 top-1.5 size-2 animate-pulse rounded-full bg-coral" />}
+        </div>
       </div>
-      <p className="max-w-[170px] text-left text-[12px] leading-snug text-mute">
+      <p className={clsx("text-body-sm", active ? "font-medium text-violet" : "text-fg-2")}>
         {active ? "Polty is looking right now." : "What Polty would see. The camera stays on while shared."}
       </p>
     </div>
@@ -910,30 +1111,36 @@ function DisplayTakeover({ state, onStop }: { state: DisplayState; onStop: () =>
   return (
     <motion.div
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      animate={{ opacity: 1, transition: { duration: duration.fast, ease: ease.standard } }}
+      exit={{ opacity: 0, transition: { duration: duration.instant } }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center px-8 text-center"
       style={{ background: bg, color: fg, paddingBottom: "max(env(safe-area-inset-bottom), 20px)" }}
     >
       {state.mode === "message" && (
-        <motion.div initial={{ scale: 0.9, y: 10 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 200, damping: 18 }}>
+        <motion.div initial={{ scale: 0.92, y: 10 }} animate={{ scale: 1, y: 0 }} transition={spring.gentle}>
           {state.emoji && <div className="mb-6 text-[96px] leading-none">{state.emoji}</div>}
-          <p className="font-display text-[clamp(28px,8vw,46px)] font-semibold leading-[1.1]" style={{ overflowWrap: "anywhere" }}>
+          <p className="font-display text-display" style={{ overflowWrap: "anywhere" }}>
             {state.text}
           </p>
         </motion.div>
       )}
-      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 pb-[max(env(safe-area-inset-bottom),20px)]">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] opacity-70">
+      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 px-6 pb-[max(env(safe-area-inset-bottom),20px)]">
+        <p className="text-caption font-medium tabular-nums opacity-75">
           Polty is {state.mode === "flash" ? "flashing" : "showing"} this · {left}s
         </p>
-        <button
-          onClick={onStop}
-          className="rounded-full border px-5 py-2.5 text-sm font-semibold backdrop-blur"
-          style={{ borderColor: fg + "55", background: fg === "#0a0b0e" ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)" }}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.95 }}
+          transition={spring.snappy}
+          onClick={() => {
+            haptic(18);
+            onStop();
+          }}
+          className="flex h-16 w-full max-w-xs items-center justify-center gap-2.5 rounded-full bg-coral text-heading font-semibold text-fg-inverse shadow-float ring-2 ring-fg-inverse/70 transition-colors duration-150 hover:bg-coral/90"
         >
+          <Icon icon={CircleStop} size={22} strokeWidth={2.2} />
           Stop access
-        </button>
+        </motion.button>
       </div>
     </motion.div>
   );

@@ -3,20 +3,23 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
-import { Brain, KeyRound, Zap } from "lucide";
+import { Blocks, Brain, KeyRound, Zap } from "lucide";
 import { useGhost } from "@/lib/store";
+import ConnectorsPanel from "@/components/connectors/ConnectorsPanel";
 import { Icon, type IconNode } from "@/components/ui/Icon";
 import { ease, haptic, spring } from "@/components/ui/motion";
 
 /**
- * Deliberately quiet: only the brain switch is always there (Connectors lives in the voice dock).
- * Access and spending chips appear only while they matter (a lease is counting down, a budget is set).
+ * Deliberately quiet: Connectors and the brain switch are always there. Access and spending chips
+ * appear only while they matter (a lease is counting down, a budget is set). The Connectors button
+ * shares `layoutId="connectors-surface"` with the modal, which grows out of it and back into it.
  */
 export function TopBar() {
   const me = useGhost((s) => s.me);
   const budget = useGhost((s) => s.budget);
   const leases = useGhost((s) => s.leases);
   const [now, setNow] = useState(() => Date.now());
+  const [connOpen, setConnOpen] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -70,7 +73,29 @@ export function TopBar() {
           </motion.span>
         )}
       </AnimatePresence>
+      <div className="grid h-10 w-10 shrink-0 place-items-center">
+        {!connOpen && (
+          <motion.button
+            type="button"
+            layoutId="connectors-surface"
+            onClick={() => {
+              haptic();
+              setConnOpen(true);
+            }}
+            aria-label="Connectors"
+            title="Connectors"
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.9 }}
+            transition={spring.snappy}
+            style={{ borderRadius: 999 }}
+            className="ghost-chip pointer-events-auto grid h-10 w-10 place-items-center text-fg-2 transition-colors duration-150 hover:bg-white/90 hover:text-fg"
+          >
+            <Icon icon={Blocks} size={17} strokeWidth={1.9} />
+          </motion.button>
+        )}
+      </div>
       <BrainToggle />
+      <ConnectorsPanel open={connOpen} onClose={() => setConnOpen(false)} />
     </header>
   );
 }

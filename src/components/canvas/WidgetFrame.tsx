@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { X } from "lucide";
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import clsx from "clsx";
 import { Icon, type IconNode } from "@/components/ui/Icon";
 import { ease, spring } from "@/components/ui/motion";
@@ -10,7 +10,8 @@ import { ease, spring } from "@/components/ui/motion";
 /**
  * Shell for every canvas widget: a clean glass card with a serif title, a focus ring while Polty is
  * looking at it, an ectoplasm sweep while Polty possesses it, and a materialize/dematerialize
- * transition. `data-widget-id` is how PoltyStage finds the card to fly to it — keep it.
+ * transition. `data-widget-id` is how PoltyStage finds the card to fly to it (and how the canvas
+ * brings it into view) — keep it.
  */
 export function WidgetFrame({
   id,
@@ -33,14 +34,8 @@ export function WidgetFrame({
   onClose?: () => void;
   children: ReactNode;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (focused) ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [focused]);
-
   return (
     <motion.div
-      ref={ref}
       layout
       data-widget-id={id}
       initial={{ opacity: 0, scale: 0.94, y: 18, filter: "blur(10px)" }}

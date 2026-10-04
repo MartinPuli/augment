@@ -1,6 +1,9 @@
 "use client";
+import clsx from "clsx";
+import { Play, SquarePlay } from "lucide";
+import { Icon } from "@/components/ui/Icon";
 import type { WidgetComponentProps } from "../../types";
-import { card, col, sub } from "./styles";
+import { EmptyState } from "./EmptyState";
 
 interface Video { id: string; title: string; channel?: string | null; url?: string; thumbnail?: string }
 interface Props { videos?: Video[]; selected?: string }
@@ -8,40 +11,56 @@ interface Props { videos?: Video[]; selected?: string }
 export default function YouTubeWidget({ props, update, report }: WidgetComponentProps<Props>) {
   const videos = props.videos ?? [];
   const sel = videos.find((v) => v.id === props.selected) ?? videos[0];
+  if (!videos.length) return <EmptyState illustration="video" fallback={SquarePlay} title="No videos" subtitle="Nothing came back for that search." />;
   return (
-    <div style={col}>
+    <div className="flex min-w-0 flex-col gap-3">
       {sel && (
-        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", borderRadius: 14, overflow: "hidden", background: "#000" }}>
+        <div className="relative aspect-video w-full overflow-hidden rounded-tile bg-fg shadow-card">
           <iframe
             key={sel.id}
             src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(sel.id)}?autoplay=1&rel=0`}
             title={sel.title}
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+            className="absolute inset-0 h-full w-full border-0"
           />
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
-        {videos.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            onClick={() => {
-              update({ selected: v.id });
-              report({ playing: v.id, title: v.title });
-            }}
-            style={{ ...card, display: "flex", gap: 10, alignItems: "center", textAlign: "left", cursor: "pointer", padding: 6, outline: v.id === sel?.id ? "2px solid rgba(20,22,26,.35)" : "none" }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={v.thumbnail ?? `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" style={{ width: 88, height: 50, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
-            <span style={{ minWidth: 0 }}>
-              <span style={{ display: "block", fontWeight: 600, fontSize: 13, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.title}</span>
-              {v.channel && <span style={sub}>{v.channel}</span>}
-            </span>
-          </button>
-        ))}
-      </div>
+      <ul className="ghost-scroll flex max-h-[220px] flex-col gap-0.5 overflow-y-auto">
+        {videos.map((v) => {
+          const active = v.id === sel?.id;
+          return (
+            <li key={v.id}>
+              <button
+                type="button"
+                aria-current={active ? "true" : undefined}
+                onClick={() => {
+                  update({ selected: v.id });
+                  report({ playing: v.id, title: v.title });
+                }}
+                className={clsx(
+                  "flex w-full min-w-0 items-center gap-3 rounded-tile p-1.5 pr-3 text-left transition-colors duration-150 ease-standard",
+                  active ? "bg-tint" : "hover:bg-tint",
+                )}
+              >
+                <span className="relative h-[50px] w-[88px] shrink-0 overflow-hidden rounded-[10px] bg-tint">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={v.thumbnail ?? `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" className="h-full w-full object-cover" />
+                  {active && (
+                    <span className="absolute inset-0 grid place-items-center bg-fg/45 text-fg-inverse">
+                      <Icon icon={Play} size={16} />
+                    </span>
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-body-sm font-medium text-fg">{v.title}</span>
+                  {v.channel && <span className="block truncate text-caption text-fg-3">{active ? `Playing · ${v.channel}` : v.channel}</span>}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
