@@ -78,7 +78,7 @@ function chip(ctx: CanvasRenderingContext2D, x: number, y: number, text: string,
   const pad = 4;
   const h = 15;
   const cx = Math.max(2, Math.min(x, ctx.canvas.width / (ctx.getTransform().a || 1) - tw - pad * 2 - 2));
-  const cy = Math.max(2, y - h - 3);
+  const cy = Math.max(30, y - h - 3); // stay below the HTML top strip
   ctx.fillStyle = strong ? rgba(HUD.ink, 0.86) : rgba(HUD.ink, 0.62);
   ctx.fillRect(cx, cy, tw + pad * 2, h);
   ctx.fillStyle = color;
@@ -107,9 +107,11 @@ export function drawTracks(ctx: CanvasRenderingContext2D, a: DrawTracksArgs) {
     if (t.trail.length < 2) continue;
     const isT = t.id === targetId;
     const col = isT ? HUD.mint : classColor(t.label);
+    const jump = Math.max(t.box.w, t.box.h) * 2.5 + 4;
     for (let i = 1; i < t.trail.length; i++) {
       const p0 = t.trail[i - 1];
       const p1 = t.trail[i];
+      if (Math.abs(p1.x - p0.x) + Math.abs(p1.y - p0.y) > jump) continue; // skip ID-switch jumps
       const age = (now - p1.t) / 2500;
       const alpha = Math.max(0, 1 - age) * (i / t.trail.length) * (isT ? 0.9 : 0.45);
       if (alpha <= 0.02) continue;

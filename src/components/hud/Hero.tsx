@@ -39,7 +39,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.8 }}
-            className="mt-4 max-w-[560px] text-balance text-[15px] leading-relaxed text-ivory-dim sm:text-[17px]"
+            className="mt-3 max-w-[560px] text-balance text-[14px] sm:mt-4 sm:text-[15px] leading-relaxed text-ivory-dim sm:text-[17px]"
           >
             Your agent knows what to do. <span className="text-ivory">Polty</span> finds it the eyes, hands and instruments to do it — then gives them back.
           </motion.p>
@@ -49,14 +49,14 @@ export function Hero() {
             variants={{ show: { transition: { staggerChildren: 0.06, delayChildren: 0.6 } } }}
             className="pointer-events-auto mt-7 flex max-w-[880px] flex-wrap justify-center gap-2"
           >
-            {SUGGESTIONS.map((s) => (
-              <motion.li key={s.text} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+            {SUGGESTIONS.map((s, i) => (
+              <motion.li key={s.text} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className={i >= 4 ? "hidden sm:block" : undefined}>
                 <button
                   onClick={() => {
                     speaker?.unlock();
                     void sendToPolty(s.text);
                   }}
-                  className="group flex items-center gap-2 rounded-full border border-line bg-ink-2/70 px-4 py-2 text-left text-[13px] text-ivory-dim backdrop-blur transition hover:-translate-y-0.5 hover:border-mint/40 hover:text-ivory"
+                  className="group flex items-center gap-2 rounded-full border border-line bg-ink-2/70 px-3.5 py-1.5 text-left text-[12.5px] sm:px-4 sm:py-2 sm:text-[13px] text-ivory-dim backdrop-blur transition hover:-translate-y-0.5 hover:border-mint/40 hover:text-ivory"
                 >
                   <span>{s.text}</span>
                   <span className="hidden font-mono text-[9.5px] uppercase tracking-[0.14em] text-mute group-hover:text-mint sm:inline">{s.tag}</span>

@@ -12,6 +12,8 @@ export interface VisionModelSpec {
   name: string;
   family: ModelFamily;
   url: string;
+  /** Optional same-origin copy (scripts/vision-fetch-model.ts, git-ignored); tried before `url`. */
+  local: string;
   /** Bytes (for progress UI). */
   bytes: number;
   license: string;
@@ -32,6 +34,7 @@ export const VISION_MODELS: Record<string, VisionModelSpec> = {
     name: "D-FINE-N",
     family: "dfine",
     url: `${HF}/onnx-community/dfine_n_coco-ONNX/resolve/main/onnx/model.onnx`,
+    local: "/vision/models/dfine-n.onnx",
     bytes: 15_258_358,
     license: "Apache-2.0",
     license_url: `${HF}/ustc-community/dfine-nano-coco`,
@@ -44,6 +47,7 @@ export const VISION_MODELS: Record<string, VisionModelSpec> = {
     name: "YOLOv10n",
     family: "yolov10",
     url: `${HF}/onnx-community/yolov10n/resolve/main/onnx/model.onnx`,
+    local: "/vision/models/yolov10n.onnx",
     bytes: 9_386_116,
     license: "AGPL-3.0",
     license_url: `${HF}/onnx-community/yolov10n`,

@@ -182,6 +182,14 @@ export class Tracker {
       tr.vw = (1 - k) * tr.vw * 0.5 + k * ((sw - tr.box.w) / dt) * 0.5;
       tr.vh = (1 - k) * tr.vh * 0.5 + k * ((sh - tr.box.h) / dt) * 0.5;
     }
+    // cap velocity to a plausible number of box-lengths per second (stops run-away predictions after
+    // an occasional wrong association)
+    const vmax = Math.max(sw, sh) * 6 + 20;
+    const vmag = Math.hypot(tr.vx, tr.vy);
+    if (vmag > vmax) {
+      tr.vx *= vmax / vmag;
+      tr.vy *= vmax / vmag;
+    }
     tr.box = { x: scx - sw / 2, y: scy - sh / 2, w: sw, h: sh };
     tr.score = 0.7 * tr.score + 0.3 * d.score;
     if (d.label !== tr.label && d.score > tr.score + 0.1) {

@@ -120,7 +120,7 @@ export function VoiceDock() {
     deliver(t);
   };
 
-  const status = listening ? "Listening" : activity === "thinking" ? "Thinking" : activity === "acting" ? "Working" : activity === "speaking" ? "Speaking" : "Tap or hold space";
+  const status = listening ? "Listening" : activity === "thinking" ? "Thinking" : activity === "acting" ? "Working" : activity === "speaking" ? "Speaking" : null;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 px-3 pb-[max(14px,env(safe-area-inset-bottom))]">
@@ -187,10 +187,17 @@ export function VoiceDock() {
             </form>
           ) : (
             <div className="flex h-12 flex-col justify-center">
-              <div className="hud-label flex items-center gap-2">
+              <div className="hud-label flex min-w-0 items-center gap-2 whitespace-nowrap">
                 <span className={clsx("h-1.5 w-1.5 rounded-full", listening ? "bg-mint animate-pulse" : running ? "bg-violet animate-pulse" : "bg-mute")} />
-                {status}
-                {voiceProvider === "browser" && <span className="text-mute/70">· browser voice</span>}
+                <span className="truncate">
+                  {status ?? (
+                    <>
+                      <span className="sm:hidden">Tap to talk</span>
+                      <span className="hidden sm:inline">Tap or hold space</span>
+                    </>
+                  )}
+                </span>
+                {voiceProvider === "browser" && <span className="hidden text-mute/70 sm:inline">· browser voice</span>}
               </div>
               <AnimatePresence mode="wait">
                 <motion.p
@@ -199,7 +206,7 @@ export function VoiceDock() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.18 }}
-                  className={clsx("line-clamp-2 text-[14.5px] leading-snug", caption?.who === "user" ? "text-ivory-dim" : "text-ivory")}
+                  className={clsx("line-clamp-2 text-[13px] leading-snug sm:text-[14.5px]", caption?.who === "user" ? "text-ivory-dim" : "text-ivory")}
                 >
                   {caption ? (caption.who === "user" ? `“${caption.text}”` : caption.text) : <span className="text-mute">Say “Polty, what can you reach?”</span>}
                 </motion.p>
@@ -215,9 +222,11 @@ export function VoiceDock() {
               <Square size={14} fill="currentColor" />
             </IconBtn>
           )}
-          <IconBtn label={handsFree ? "Hands-free on" : "Hands-free off"} onClick={toggleHandsFree} active={handsFree}>
-            <span className="font-mono text-[10px] font-semibold">HF</span>
-          </IconBtn>
+          <span className="hidden sm:contents">
+            <IconBtn label={handsFree ? "Hands-free on" : "Hands-free off"} onClick={toggleHandsFree} active={handsFree}>
+              <span className="font-mono text-[10px] font-semibold">HF</span>
+            </IconBtn>
+          </span>
           <IconBtn label="Type" onClick={() => setTyping((t) => !t)} active={typing}>
             <Keyboard size={16} />
           </IconBtn>

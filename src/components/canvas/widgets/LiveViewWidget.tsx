@@ -421,6 +421,7 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
           source_title: titleRef.current,
           source_kind: srcKindRef.current,
           tracking: trackOnRef.current,
+          classes: classesRef.current,
           counts: Object.fromEntries(s.counts),
           total: s.counts.reduce((n, [, v]) => n + v, 0),
           follow_status: s.status,

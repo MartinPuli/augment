@@ -33,7 +33,7 @@ export function TopBar() {
       <div className="pointer-events-auto flex items-center gap-2.5">
         <PoltyGlyph size={26} />
         <div className="leading-none">
-          <div className="font-display text-[17px] font-extrabold tracking-[0.18em] text-ivory">GHOST</div>
+          <div className="font-display text-[15px] font-extrabold tracking-[0.18em] text-ivory sm:text-[17px]">GHOST</div>
           <div className="mt-0.5 hidden font-mono text-[9.5px] uppercase tracking-[0.2em] text-mute sm:block">give your agent a body</div>
         </div>
       </div>
@@ -50,14 +50,14 @@ export function TopBar() {
         </div>
       )}
 
-      <div className="pointer-events-auto flex items-center gap-1.5">
-        <Chip icon={<Cpu size={12} />} label={`${personal} ${personal === 1 ? "body" : "bodies"}`} title={`${personal} personal devices online · ${publicCount} public sources`} tone={personal ? "mint" : "mute"} />
+      <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+        <Chip compact icon={<Cpu size={12} />} label={`${personal} ${personal === 1 ? "body" : "bodies"}`} title={`${personal} personal devices online · ${publicCount} public sources`} tone={personal ? "mint" : "mute"} />
         {active.length > 0 && <Chip icon={<KeyRound size={12} />} label={`${active.length} · ${Math.ceil((soonest ?? 0) / 1000)}s`} title="Active leases · time remaining" tone="mint" pulse />}
         {me && <Chip icon={<Wallet size={12} />} label={`$${(me.balance_cents / 100).toFixed(2)}`} title="Development ledger — test funds, not real money" tone="amber" />}
         <Link href="/owner" className="grid h-8 w-8 place-items-center rounded-full text-ivory-dim transition hover:bg-ink-4 hover:text-ivory" title="Owner console" aria-label="Owner console">
           <Settings2 size={15} />
         </Link>
-        <button onClick={() => resetSession()} className="grid h-8 w-8 place-items-center rounded-full text-ivory-dim transition hover:bg-ink-4 hover:text-ivory" title="New session" aria-label="New session">
+        <button onClick={() => resetSession()} className="hidden h-8 w-8 sm:grid place-items-center rounded-full text-ivory-dim transition hover:bg-ink-4 hover:text-ivory" title="New session" aria-label="New session">
           <RotateCcw size={15} />
         </button>
       </div>
@@ -65,17 +65,24 @@ export function TopBar() {
   );
 }
 
-function Chip({ icon, label, title, tone, pulse }: { icon: React.ReactNode; label: string; title: string; tone: "mint" | "amber" | "mute"; pulse?: boolean }) {
+function Chip({ icon, label, title, tone, pulse, compact }: { icon: React.ReactNode; label: string; title: string; tone: "mint" | "amber" | "mute"; pulse?: boolean; compact?: boolean }) {
   return (
     <span
       title={title}
       className={clsx(
-        "ghost-glass inline-flex h-8 items-center gap-1.5 rounded-full px-3 font-mono text-[11px]",
+        "ghost-glass inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3 font-mono text-[11px]",
         tone === "mint" ? "text-mint" : tone === "amber" ? "text-amber" : "text-ivory-dim",
       )}
     >
       <span className={clsx(pulse && "animate-pulse")}>{icon}</span>
-      {label}
+      {compact ? (
+        <>
+          <span className="sm:hidden">{label.split(" ")[0]}</span>
+          <span className="hidden sm:inline">{label}</span>
+        </>
+      ) : (
+        label
+      )}
     </span>
   );
 }

@@ -1,0 +1,3 @@
+# Model weights are downloaded at runtime / by scripts/vision-fetch-model.ts; never commit them.
+*
+!.gitignore

@@ -17,6 +17,7 @@ import { ConversationDrawer } from "@/components/hud/ConversationDrawer";
 
 export default function Home() {
   useCoordinatorSync();
+  useDozing();
 
   const poke = () => {
     speaker?.unlock();
@@ -41,6 +42,34 @@ export default function Home() {
       <ConversationDrawer />
     </main>
   );
+}
+
+/** Polty dozes off after a quiet spell and wakes with a start when you come back. */
+function useDozing() {
+  useEffect(() => {
+    let last = Date.now();
+    const wake = () => {
+      last = Date.now();
+      const s = useGhost.getState();
+      if (s.mood === "sleepy") {
+        s.set({ mood: "surprised" });
+        setTimeout(() => useGhost.getState().mood === "surprised" && useGhost.getState().set({ mood: "happy" }), 600);
+        setTimeout(() => useGhost.getState().mood === "happy" && !useGhost.getState().running && useGhost.getState().set({ mood: "neutral" }), 2600);
+      }
+    };
+    const t = setInterval(() => {
+      const s = useGhost.getState();
+      if (s.running || s.activity !== "idle") last = Date.now();
+      else if (Date.now() - last > 90_000 && s.mood !== "sleepy") s.set({ mood: "sleepy" });
+    }, 2000);
+    window.addEventListener("pointermove", wake);
+    window.addEventListener("keydown", wake);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("pointermove", wake);
+      window.removeEventListener("keydown", wake);
+    };
+  }, []);
 }
 
 /** Mirror coordinator state (devices, leases, balance) into the store and react to new bodies. */

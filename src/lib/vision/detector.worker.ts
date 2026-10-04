@@ -67,7 +67,14 @@ async function fetchModel(spec: VisionModelSpec): Promise<Uint8Array> {
   } catch {
     cache = null; // Cache Storage unavailable (insecure context / private mode)
   }
-  const res = await fetch(spec.url, { mode: "cors" });
+  // same-origin copy first (pre-fetched for flaky venue Wi-Fi), then Hugging Face
+  let res: Response | null = null;
+  try {
+    const local = await fetch(new URL(spec.local, (ctx as unknown as { location: Location }).location.origin));
+    const type = local.headers.get("content-type") ?? "";
+    if (local.ok && local.body && !type.includes("text/html")) res = local;
+  } catch {}
+  res ??= await fetch(spec.url, { mode: "cors" });
   if (!res.ok || !res.body) throw new Error(`model download failed (HTTP ${res.status})`);
   const total = Number(res.headers.get("content-length")) || spec.bytes;
   const reader = res.body.getReader();

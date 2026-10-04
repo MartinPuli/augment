@@ -2,7 +2,7 @@
 // Usage: pnpm exec tsx scripts/ui-shot.mts <url> <out.png> [prompt] [waitMs] [width] [height]
 import { chromium } from "playwright-core";
 
-const [url = "http://localhost:3000/", out = "shot.png", prompt, waitMs = "2500", w = "1440", h = "900"] = process.argv.slice(2);
+const [url = "http://localhost:3000/", out = "shot.png", prompt, waitMs = "2500", w = "1440", h = "900", clickSel] = process.argv.slice(2);
 const browser = await chromium.launch({
   executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   headless: true,
@@ -16,11 +16,15 @@ await page.goto(url, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(1500);
 if (prompt) {
   await page.keyboard.press("Escape");
-  await page.click('button[aria-label="Type"]');
+  await page.click('button[aria-label="Type"]', { force: true });
   await page.fill("input[placeholder]", prompt);
   await page.keyboard.press("Enter");
 }
 await page.waitForTimeout(Number(waitMs));
+if (clickSel) {
+  await page.click(clickSel);
+  await page.waitForTimeout(1200);
+}
 await page.screenshot({ path: out });
 console.log(logs.slice(0, 15).join("\n") || "no console errors");
 await browser.close();
