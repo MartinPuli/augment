@@ -9,7 +9,7 @@ import {
   googleConfigured,
   newState,
   redirectUri,
-  takeState,
+  readState,
 } from "../google/oauth";
 
 /**
@@ -41,15 +41,23 @@ export function mountGoogleRoutes(app: Hono) {
     const p = await getPrincipalOptional(c);
     // No principal yet: me() creates one and sets the cookie on this redirect response.
     const pid = p?.principal_id ?? (await me(c)).principal_id;
-    return c.redirect(consentUrl(newState(pid)));
+    // Remember which origin started sign-in so we can send the user back there afterwards.
+    const origin = new URL(c.req.url).origin;
+    const fwdHost = c.req.header("x-forwarded-host") ?? c.req.header("host");
+    const fwdProto = c.req.header("x-forwarded-proto") ?? (origin.startsWith("https") ? "https" : "http");
+    const returnTo = fwdHost ? `${fwdProto}://${fwdHost}` : origin;
+    return c.redirect(consentUrl(newState(pid, returnTo)));
   });
 
   app.get("/google/callback", async (c) => {
     const err = c.req.query("error");
     if (err) return c.redirect(`/connectors?google=error&reason=${encodeURIComponent(err)}`);
-    const owner = takeState(c.req.query("state"));
-    const p = await getPrincipalOptional(c);
-    if (!owner || (p && p.principal_id !== owner)) return c.redirect("/connectors?google=error&reason=state_mismatch");
+    // The signed state names the principal that started sign-in; tokens are stored for it even if
+    // this callback arrives on another origin (different cookie jar).
+    const st = readState(c.req.query("state"));
+    const owner = st?.principal_id ?? null;
+    if (!owner) return c.redirect("/connectors?google=error&reason=state_expired_try_again");
+    const back = st?.return_to && /^https?:\/\/[^/]+$/.test(st.return_to) ? st.return_to : "";
     const code = c.req.query("code");
     if (!code) return c.redirect("/connectors?google=error&reason=missing_code");
     try {
@@ -57,7 +65,7 @@ export function mountGoogleRoutes(app: Hono) {
     } catch (e) {
       return c.redirect(`/connectors?google=error&reason=${encodeURIComponent((e as Error).message.slice(0, 120))}`);
     }
-    return c.redirect("/connectors?google=connected");
+    return c.redirect(`${back}/connectors?google=connected`);
   });
 
   app.post("/google/disconnect", async (c) => {
