@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
@@ -96,6 +97,13 @@ export function TopBar() {
       </div>
       <BrainToggle />
       <ConnectorsPanel open={connOpen} onClose={() => setConnOpen(false)} />
+      <Link
+        href="/devices"
+        aria-label="Connect devices"
+        className="ghost-chip pointer-events-auto inline-flex h-10 items-center rounded-full px-3.5 text-caption font-medium text-fg-2 transition-colors duration-150 hover:bg-white/90 hover:text-fg"
+      >
+        Devices
+      </Link>
     </header>
   );
 }

@@ -1,3 +1,6 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+overrides:
+  mdast-util-find-and-replace: 3.0.2
+  pino-pretty: 13.1.3

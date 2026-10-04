@@ -132,6 +132,11 @@ export const TOOL_DEFS: ToolDef[] = [
 
   /* ---------------- memory ---------------- */
   {
+    name: "recall_device_connections",
+    description: "Recall owned or previously used devices, including offline ones: connection instructions, current capability schemas and actual previous calls. History is saved automatically from coordinator invocations, survives restarts, and is not a permission grant. Use before reconnecting or repeating a device task.",
+    input_schema: { type: "object", properties: { query: { type: "string" }, device_id: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 30 } } },
+  },
+  {
     name: "recall_experience",
     description: "Recall what worked before for similar goals (devices used, outcome, cost, evidence). Always re-check availability and get fresh permission before reusing a device.",
     input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
@@ -325,6 +330,7 @@ export const TOOL_LABELS: Record<string, string> = {
   release_lease: "Releasing device",
   set_task_budget: "Setting budget",
   recall_experience: "Remembering",
+  recall_device_connections: "Remembering device connections",
   record_experience: "Saving experience",
   scan_network: "Scanning Wi-Fi",
   canvas_show: "Drawing",

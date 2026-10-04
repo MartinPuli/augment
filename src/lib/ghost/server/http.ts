@@ -4,6 +4,7 @@ import type { AccessType, DeviceClass, InvokeRequest, QuoteRequest, SearchQuery 
 import type { RecordExperienceRequest, TermsPatch } from "../client/api-types";
 import { getPrincipal, getPrincipalOptional, me } from "./auth";
 import { dbReady } from "./db";
+import { recallDeviceConnections } from "./device-connections";
 import { subscribe } from "./events";
 import { recallExperience, recordExperience } from "./experiences";
 import {
@@ -63,6 +64,9 @@ function v1Routes(): Hono {
   v1.get("/me", async (c) => c.json(await me(c)));
 
   /* catalog */
+  v1.get("/device-connections", async (c) => c.json(await recallDeviceConnections(await getPrincipal(c), {
+    query: c.req.query("q"), device_id: c.req.query("device_id"), limit: Number(c.req.query("limit")) || undefined,
+  })));
   v1.get("/capabilities", async (c) => {
     const viewer = await getPrincipalOptional(c);
     return c.json(await searchCapabilities(parseSearchQuery(c.req.query()), viewer?.principal_id ?? null));

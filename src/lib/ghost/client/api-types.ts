@@ -10,7 +10,42 @@ import type {
   Lease,
   PaymentReceipt,
   Terms,
+  InvocationState,
+  JSONSchema,
+  VerificationMethod,
+  CatalogStatus,
+  Transport,
 } from "../contracts";
+import type { ConnectionGuide } from "../connection-guide";
+
+export interface RememberedDeviceCall {
+  invocation_id: string;
+  capability_id: string;
+  arguments: Record<string, unknown>;
+  state: InvocationState;
+  observation_id: string | null;
+  finished_at: string;
+  available_now: boolean;
+  input_label?: string;
+}
+
+export interface DeviceConnectionMemory {
+  device_id: string;
+  name: string;
+  online: boolean;
+  status: CatalogStatus;
+  transport: Transport;
+  guide: ConnectionGuide;
+  capabilities: { ref: string; title: string; input_schema: JSONSchema; verification: VerificationMethod }[];
+  history: {
+    succeeded: number;
+    failed: number;
+    unknown: number;
+    recent: RememberedDeviceCall[];
+    last_successful: RememberedDeviceCall[];
+  };
+  reuse_rule: string;
+}
 
 export const DEV_LEDGER_LABEL = "Development ledger — test funds, not a real payment";
 

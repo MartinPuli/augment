@@ -78,6 +78,8 @@ export interface DriverDevice extends DeviceExtras {
  * The module only exists after the browser API is available AND permission was granted.
  */
 export interface CapabilityModule extends DeviceExtras {
+  /** Non-secret connection hints that can be remembered alongside the device manifest. */
+  connection?: { method: string; input_label?: string };
   /** "camera" | "microphone" | "speaker" | "display" | "haptics" | "motion" | "location" | "battery" | "torch" */
   id: string;
   label: string;

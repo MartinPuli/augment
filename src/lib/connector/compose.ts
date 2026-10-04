@@ -16,7 +16,11 @@ export function composeDevice(
   const manifest = makeManifest({
     ...base,
     capabilities: [...owner.entries()].map(([id, m]) => m.capabilities.find((c) => c.capability_id === id)!),
-    meta: { ...(base.meta ?? {}), modules: modules.map((m) => m.id) },
+    meta: {
+      ...(base.meta ?? {}),
+      modules: modules.map((m) => m.id),
+      module_connections: Object.fromEntries(modules.filter((m) => m.connection).map((m) => [m.id, m.connection])),
+    },
   });
   const signalModule = modules.find((m) => m.onSignal);
   return {

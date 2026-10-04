@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { CapabilityRef, InvokeResponse } from "../contracts";
 import { parseRef } from "../contracts";
 import { getPrincipalOptional } from "./auth";
+import { recallDeviceConnections } from "./device-connections";
 import { recallExperience, recordExperience } from "./experiences";
 import { getObservationMedia, invoke } from "./invocations";
 import { getLedger } from "./ledger";
@@ -124,6 +125,16 @@ export function buildMcpServer(principal_id: string): McpServer {
       );
       return text(hits, `${hits.length} capabilities. ${DATA_NOTE}`);
     }),
+  );
+
+  server.registerTool(
+    "recall_device_connections",
+    {
+      title: "Recall device connections and recorded calls",
+      description: "Remember devices you own or used: how to reconnect, current capability schemas, and your actual previous invocation outcomes. Includes offline devices. Memory survives server restarts, does not grant access, and never marks acknowledgment-only actions as physically verified.",
+      inputSchema: { query: z.string().optional(), device_id: z.string().optional(), limit: z.number().int().min(1).max(30).optional() },
+    },
+    wrap(async (a) => text(await recallDeviceConnections(principal_id, a), DATA_NOTE)),
   );
 
   server.registerTool(

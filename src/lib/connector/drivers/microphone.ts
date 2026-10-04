@@ -3,7 +3,24 @@
  * Must be enabled from a user gesture (AudioContext unlock on iOS).
  */
 import { InvokeError, type CapabilityModule } from "../types";
-import { numArg, sleep } from "../util";
+import { numArg, safeStorage, sleep } from "../util";
+
+const INPUT_KEY = "ghost.microphone.input.v1";
+export interface MicrophoneInput { deviceId: string; label: string }
+
+export function rememberedMicrophoneInput(): MicrophoneInput | null {
+  try {
+    const value = JSON.parse(safeStorage()?.getItem(INPUT_KEY) ?? "null");
+    return value && typeof value.deviceId === "string" && typeof value.label === "string" ? value : null;
+  } catch { return null; }
+}
+
+/** Enumeration never requests permission or starts recording. Labels may initially be hidden. */
+export async function listMicrophoneInputs(): Promise<MicrophoneInput[]> {
+  if (!navigator.mediaDevices?.enumerateDevices) return [];
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices.filter((d) => d.kind === "audioinput" && d.deviceId).map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Audio input ${i + 1}` }));
+}
 
 export interface MicrophoneModule extends CapabilityModule {
   readonly stream: MediaStream;
@@ -30,16 +47,30 @@ function pickMime(): string | undefined {
 
 const toDb = (x: number) => (x > 0 ? 20 * Math.log10(x) : -120);
 
-export async function enableMicrophone(opts: { label?: string } = {}): Promise<MicrophoneModule> {
+export async function enableMicrophone(opts: { label?: string; deviceId?: string } = {}): Promise<MicrophoneModule> {
   const s = microphoneSupport();
   if (!s.supported) throw new Error(s.reason);
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-    video: false,
-  });
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(opts.deviceId ? { deviceId: { exact: opts.deviceId } } : {}) },
+      video: false,
+    });
+  } catch (e) {
+    if (opts.deviceId && e instanceof DOMException && ["NotFoundError", "OverconstrainedError"].includes(e.name)) {
+      throw new Error("The selected microphone is unavailable. Reconnect it through the operating system, refresh inputs, or explicitly choose another microphone.");
+    }
+    throw e;
+  }
+  const track = stream.getAudioTracks()[0];
+  const inputLabel = track?.label || opts.label || "Microphone";
   const AC: typeof AudioContext =
     window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-  const ac = new AC();
+  let ac: AudioContext;
+  try { ac = new AC(); } catch (e) {
+    stream.getTracks().forEach((t) => t.stop());
+    throw e;
+  }
   try {
     await ac.resume();
   } catch {}
@@ -50,6 +81,7 @@ export async function enableMicrophone(opts: { label?: string } = {}): Promise<M
   const buf = new Float32Array(analyser.fftSize);
   let disposed = false;
   let busy = false;
+  const inputEnded = () => !track || track.readyState === "ended";
 
   const frame = () => {
     analyser.getFloatTimeDomainData(buf);
@@ -105,14 +137,21 @@ export async function enableMicrophone(opts: { label?: string } = {}): Promise<M
     });
   }
 
+  // Save only a successfully opened selection. Browser-specific IDs stay on this browser.
+  try {
+    const deviceId = track?.getSettings().deviceId;
+    if (deviceId) safeStorage()?.setItem(INPUT_KEY, JSON.stringify({ deviceId: opts.deviceId || "", label: inputLabel }));
+  } catch {}
   return {
     id: "microphone",
-    label: opts.label ?? "Microphone",
+    label: opts.label ?? inputLabel,
+    connection: { method: "browser-audio-input", input_label: inputLabel },
     capabilities,
     stream,
     levelNow: () => (disposed ? -120 : toDb(frame().rms)),
     async handle(capability_id, args, ctx) {
       if (disposed) throw new InvokeError("microphone was turned off by the owner", "failed");
+      if (inputEnded()) throw new InvokeError("microphone disconnected; the owner must reconnect or select an input", "failed");
       if (busy) throw new InvokeError("microphone is busy with another request", "rejected");
       busy = true;
       try {
@@ -127,6 +166,7 @@ export async function enableMicrophone(opts: { label?: string } = {}): Promise<M
           let maxRms = 0;
           const end = Date.now() + seconds * 1000;
           while (Date.now() < end) {
+            if (disposed || inputEnded()) throw new InvokeError("microphone access stopped during measurement", "failed");
             const f = frame();
             energy += f.rms * f.rms;
             n++;
@@ -145,6 +185,7 @@ export async function enableMicrophone(opts: { label?: string } = {}): Promise<M
               peak_dbfs: Math.round(toDb(peak) * 10) / 10,
               loudest_window_dbfs: Math.round(toDb(maxRms) * 10) / 10,
               samples: n,
+              input_label: inputLabel,
             },
             note: "dBFS is relative to the microphone's digital full scale (0 = clipping); not calibrated dB SPL. Typical quiet room ≈ -60…-45 dBFS, speech ≈ -35…-20.",
           };
@@ -166,13 +207,14 @@ export async function enableMicrophone(opts: { label?: string } = {}): Promise<M
             if (rec.state !== "inactive") rec.stop();
           }
           await stopped;
+          if (disposed || inputEnded()) throw new InvokeError("microphone access stopped during recording", "failed");
           const blob = new Blob(chunks, { type: mime.split(";")[0] });
           if (!blob.size) throw new InvokeError("recording produced no audio", "failed");
           const observation_id = await ctx.upload(blob, { capturedAt: started, contentType: blob.type });
           return {
             observation_id,
             captured_at: started.toISOString(),
-            data: { seconds: Math.round(seconds * 10) / 10, mime: blob.type, bytes: blob.size },
+            data: { seconds: Math.round(seconds * 10) / 10, mime: blob.type, bytes: blob.size, input_label: inputLabel },
             note: "Audio clip stored as an observation. The agent may not be able to interpret audio content directly; use audio.level for loudness.",
           };
         }
