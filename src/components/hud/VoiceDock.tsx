@@ -3,14 +3,23 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ArrowUp, Keyboard, Mic, MessagesSquare, Square, Waves } from "lucide-react";
-import { levels, useGhost } from "@/lib/store";
+import { ArrowUp, Blocks, Square } from "lucide";
+import { useGhost } from "@/lib/store";
 import { cancelRun, sendToPolty } from "@/lib/agent/runtime";
 import { listener, type ListenMode } from "@/lib/voice/listener";
 import { speaker } from "@/lib/voice/speaker";
+import { Icon, type IconNode } from "@/components/ui/Icon";
+import { duration, ease, haptic, spring } from "@/components/ui/motion";
+import { VoiceOrb, type OrbTone } from "./VoiceOrb";
+import ConnectorsPanel from "@/components/connectors/ConnectorsPanel";
 
 /**
- * The voice dock: tap (or hold Space) to talk, hands-free mode, typed fallback, live captions.
+ * The voice dock: one microphone in the middle (tap, or hold Space, to talk) and Connectors beside
+ * it. Polty answers by voice, so there is no visible transcript: the caption is kept for screen
+ * readers only. A Stop button appears only while Polty is working or speaking. To type instead,
+ * just start typing anywhere — a field opens above the mic.
+ *
+ * Its measured height is published as `--dock-h`, which the hero and canvas use to stay clear.
  */
 export function VoiceDock() {
   const activity = useGhost((s) => s.activity);
@@ -18,12 +27,23 @@ export function VoiceDock() {
   const running = useGhost((s) => s.running);
   const handsFree = useGhost((s) => s.handsFree);
   const error = useGhost((s) => s.error);
-  const voiceProvider = useGhost((s) => s.voiceProvider);
+  const toolStatus = useGhost((s) => s.toolStatus);
+  const liveSession = useGhost((s) => (s as { liveSession?: "off" | "connecting" | "live" }).liveSession ?? "off");
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
+  const [connOpen, setConnOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const listening = activity === "listening";
+  const busy = running || activity === "speaking" || activity === "thinking" || activity === "acting";
+
+  // Publish the dock height for the layout above it.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty("--dock-h", `${Math.ceil(el.getBoundingClientRect().height)}px`));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const deliver = useCallback((text: string) => {
     void sendToPolty(text);
@@ -39,6 +59,7 @@ export function VoiceDock() {
           listener.pause();
           speaker?.stop();
         }
+        haptic(10);
         deliver(t);
       });
     },
@@ -46,6 +67,8 @@ export function VoiceDock() {
   );
 
   const toggleMic = useCallback(() => {
+    haptic();
+    setTyping(false);
     if (listener?.listening && !useGhost.getState().handsFree) listener.finish();
     else if (listener?.listening) {
       listener.stop();
@@ -53,14 +76,7 @@ export function VoiceDock() {
     } else startListening("tap");
   }, [startListening]);
 
-  const toggleHandsFree = () => {
-    const next = !handsFree;
-    useGhost.getState().set({ handsFree: next });
-    if (next) startListening("handsfree");
-    else listener?.stop();
-  };
-
-  // Hold Space to talk (when not typing in a field).
+  // Hold Space to talk (when not typing in a field); Escape stops everything.
   useEffect(() => {
     let held = false;
     const isField = (t: EventTarget | null) => t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
@@ -79,6 +95,14 @@ export function VoiceDock() {
       if (e.key === "Escape") {
         cancelRun();
         listener?.stop();
+        setTyping(false);
+        return;
+      }
+      // Type to talk: any printable key outside a field opens the message field with that key.
+      if (e.key.length === 1 && e.key !== " " && !e.metaKey && !e.ctrlKey && !e.altKey && !isField(e.target) && !document.querySelector("[role=dialog]")) {
+        e.preventDefault();
+        setDraft((d) => d + e.key);
+        setTyping(true);
       }
     };
     window.addEventListener("keydown", down);
@@ -90,18 +114,6 @@ export function VoiceDock() {
       window.removeEventListener("keydown", esc);
     };
   }, [startListening]);
-
-  // Mic level ring.
-  useEffect(() => {
-    let raf = 0;
-    const tick = () => {
-      const l = listening ? levels.mic : activity === "speaking" ? levels.speech : 0;
-      if (ringRef.current) ringRef.current.style.transform = `scale(${1 + l * 0.55})`;
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [listening, activity]);
 
   // In hands-free mode, resume listening after Polty finishes speaking.
   useEffect(() => {
@@ -115,143 +127,205 @@ export function VoiceDock() {
   const submit = () => {
     const t = draft.trim();
     if (!t) return;
+    haptic(10);
     speaker?.unlock();
     setDraft("");
     deliver(t);
   };
 
-  const status = listening ? "Listening" : activity === "thinking" ? "Thinking" : activity === "acting" ? "Working" : activity === "speaking" ? "Speaking" : null;
+  const tone: OrbTone = listening ? "listen" : activity === "speaking" ? "speak" : activity === "thinking" || activity === "acting" ? "think" : "idle";
+  const live = liveSession === "live";
+  const status = live
+    ? listening
+      ? "Live · just talk, tap to end"
+      : "Live"
+    : liveSession === "connecting"
+      ? "Connecting…"
+      : listening
+        ? "Listening · tap to send"
+        : activity === "acting"
+          ? (toolStatus ?? "Working…")
+          : activity === "thinking"
+            ? (toolStatus ?? "Thinking…")
+            : activity === "speaking"
+              ? "Speaking · tap to interrupt"
+              : null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 px-3 pb-[max(14px,env(safe-area-inset-bottom))]">
+    <div
+      ref={rootRef}
+      data-voice-dock
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center px-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:pb-5"
+    >
+      {/* soft floor so captions stay legible over canvas content */}
+      <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-[130%] bg-gradient-to-t from-[rgb(246_245_241/0.92)] via-[rgb(246_245_241/0.6)] to-transparent" />
+
       <AnimatePresence>
         {error && (
           <motion.button
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
+            key="error"
+            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, transition: { duration: duration.fast } }}
+            transition={spring.gentle}
             onClick={() => useGhost.getState().set({ error: null })}
-            className="ghost-chip pointer-events-auto max-w-[680px] rounded-full !border-coral/30 px-4 py-1.5 text-[12px] font-medium text-coral"
+            title="Dismiss"
+            className="ghost-chip pointer-events-auto absolute bottom-full mb-2 max-w-[min(640px,calc(100vw-24px))] rounded-2xl px-4 py-2 text-left text-body-sm font-medium text-coral"
           >
             {error}
           </motion.button>
         )}
       </AnimatePresence>
 
-      <motion.div layout className="ghost-glass pointer-events-auto flex w-full max-w-[760px] items-center gap-3 rounded-[32px] p-2 pr-3">
-        {/* mic */}
-        <button
-          onClick={toggleMic}
-          className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full"
-          aria-label={listening ? "Send" : "Talk to Polty"}
-        >
-          <div
-            ref={ringRef}
-            className={clsx(
-              "absolute inset-0 rounded-full transition-colors duration-300",
-              listening ? "bg-mint/20" : activity === "speaking" ? "bg-ivory/10" : activity === "thinking" || activity === "acting" ? "bg-violet/15" : "bg-white/70 shadow-[inset_0_1px_0_rgb(255_255_255)]",
-            )}
-          />
-          {listening && <span className="absolute inset-0 animate-pulse-ring rounded-full border border-mint/50" />}
-          <span
-            className={clsx(
-              "relative grid h-11 w-11 place-items-center rounded-full shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_6px_16px_-6px_rgb(15_23_42/0.55)] transition-colors duration-300",
-              listening ? "bg-mint text-white" : "bg-gradient-to-b from-[#2a2f36] to-[#121418] text-white",
-            )}
-          >
-            {listening ? <Waves size={19} /> : <Mic size={19} />}
-          </span>
-        </button>
+      {/* Polty answers by voice: the caption is for screen readers only (and voice tests read it). */}
+      <div className="sr-only" aria-live="polite">
+        <Caption caption={caption} />
+      </div>
 
-        {/* caption / input */}
-        <div className="min-w-0 flex-1">
+      {/* the message field, while typing */}
+      <div className="flex w-full max-w-[560px] items-end justify-center">
+        <AnimatePresence mode="wait" initial={false}>
           {typing ? (
-            <form
+            <motion.form
+              key="type"
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{
+                opacity: 0,
+                y: 6,
+                transition: { duration: duration.fast },
+              }}
+              transition={spring.gentle}
               onSubmit={(e) => {
                 e.preventDefault();
                 submit();
               }}
-              className="flex items-center gap-2"
+              className="ghost-chip pointer-events-auto flex h-12 w-full items-center gap-2 rounded-full pl-5 pr-1.5 focus-within:ring-2 focus-within:ring-mint/25"
             >
               <input
-                ref={inputRef}
                 autoFocus
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Ask Polty to find, see, touch or switch something…"
-                className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ivory outline-none placeholder:text-mute"
+                onBlur={() => !draft.trim() && setTyping(false)}
+                placeholder="Ask Polty anything…"
+                aria-label="Message Polty"
+                className="h-full min-w-0 flex-1 bg-transparent text-body text-fg outline-none placeholder:text-fg-3"
               />
-              <button type="submit" className="grid h-9 w-9 place-items-center rounded-full bg-ivory text-white shadow-[0_4px_12px_-4px_rgb(15_23_42/0.5)] transition hover:bg-ivory/85 disabled:opacity-30 disabled:shadow-none" disabled={!draft.trim()} aria-label="Send">
-                <ArrowUp size={16} />
+              <button
+                type="submit"
+                disabled={!draft.trim()}
+                aria-label="Send"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-fg text-fg-inverse shadow-pop transition-[opacity,transform] duration-150 active:scale-90 disabled:opacity-25 disabled:shadow-none"
+              >
+                <Icon icon={ArrowUp} size={16} strokeWidth={2.2} />
               </button>
-            </form>
-          ) : (
-            <div className="flex h-12 flex-col justify-center">
-              <div className="hud-label flex min-w-0 items-center gap-2 whitespace-nowrap">
-                <span className={clsx("h-1.5 w-1.5 rounded-full", listening ? "bg-mint animate-pulse" : running ? "bg-violet animate-pulse" : "bg-mute")} />
-                <span className="truncate">
-                  {status ?? (
-                    <>
-                      <span className="sm:hidden">Tap to talk</span>
-                      <span className="hidden sm:inline">Tap or hold space</span>
-                    </>
-                  )}
-                </span>
-                {voiceProvider === "browser" && <span className="hidden text-mute sm:inline">· browser voice</span>}
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={caption ? `${caption.who}-${caption.text.slice(0, 12)}` : "empty"}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.18 }}
-                  className={clsx("line-clamp-2 text-[13px] leading-snug sm:text-[14.5px]", caption?.who === "user" ? "text-ivory-dim" : "text-ivory")}
-                >
-                  {caption ? (caption.who === "user" ? `“${caption.text}”` : caption.text) : <span className="text-mute">Say “Polty, what can you reach?”</span>}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
+            </motion.form>
+          ) : null}
+        </AnimatePresence>
+      </div>
 
-        {/* controls */}
-        <div className="flex shrink-0 items-center gap-1">
-          {(running || activity === "speaking") && (
-            <IconBtn label="Stop" onClick={() => cancelRun()}>
-              <Square size={14} fill="currentColor" />
-            </IconBtn>
-          )}
-          <span className="hidden sm:contents">
-            <IconBtn label={handsFree ? "Hands-free on" : "Hands-free off"} onClick={toggleHandsFree} active={handsFree}>
-              <span className="font-mono text-[10px] font-semibold">HF</span>
-            </IconBtn>
-          </span>
-          <IconBtn label="Type" onClick={() => setTyping((t) => !t)} active={typing}>
-            <Keyboard size={16} />
-          </IconBtn>
-          <IconBtn label="Conversation" onClick={() => useGhost.getState().set({ drawer: !useGhost.getState().drawer })}>
-            <MessagesSquare size={16} />
-          </IconBtn>
+      {/* the microphone, Connectors beside it, Stop only while Polty is busy */}
+      <div className={clsx("pointer-events-auto grid grid-cols-[3rem_auto_3rem] items-center gap-5 sm:gap-7", typing && "mt-3")}>
+        <div className="grid place-items-center">
+          <AnimatePresence>
+            {busy && (
+              <RoundButton
+                key="stop"
+                label="Stop"
+                icon={Square}
+                tone="stop"
+                onClick={() => {
+                  haptic();
+                  cancelRun();
+                }}
+              />
+            )}
+          </AnimatePresence>
         </div>
-      </motion.div>
+        <VoiceOrb tone={tone} label={listening ? (live ? "End live session" : "Send") : "Talk to Polty"} onPress={toggleMic} />
+        <div className="grid place-items-center">
+          {!connOpen && (
+            <RoundButton
+              label="Connectors"
+              icon={Blocks}
+              layoutId="connectors-surface"
+              onClick={() => {
+                haptic();
+                setConnOpen(true);
+              }}
+            />
+          )}
+        </div>
+      </div>
+      <ConnectorsPanel open={connOpen} onClose={() => setConnOpen(false)} />
+
+      {/* status line */}
+      <div className="mt-2.5 flex h-5 items-center justify-center text-caption text-fg-3" aria-live="polite">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={status ?? "hint"}
+            initial={{ opacity: 0, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{
+              opacity: 0,
+              y: -3,
+              transition: { duration: duration.instant },
+            }}
+            transition={{ duration: duration.fast, ease: ease.standard }}
+            className="flex items-center gap-1.5 whitespace-nowrap"
+          >
+            {status ? (
+              <>
+                <span
+                  className={clsx("h-1.5 w-1.5 rounded-full", listening || live ? "animate-pulse bg-mint" : activity === "speaking" ? "bg-violet-glow" : "animate-pulse bg-violet")}
+                />
+                <span className="max-w-[78vw] truncate">{status}</span>
+              </>
+            ) : (
+              <>
+                <span className="sm:hidden">Tap the mic to talk</span>
+                <span className="hidden sm:inline">
+                  Tap the mic, hold <kbd className="mx-0.5 rounded-md bg-tint px-1.5 py-px font-sans text-micro font-medium text-fg-2">space</kbd>, or just start typing
+                </span>
+              </>
+            )}
+          </motion.span>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
 
-function IconBtn({ children, label, onClick, active }: { children: React.ReactNode; label: string; onClick: () => void; active?: boolean }) {
+/** Polty's (or your) latest words — rendered for assistive tech, kept as `p.line-clamp-2`. */
+function Caption({ caption }: { caption: { who: "user" | "polty"; text: string; interim?: boolean } | null }) {
+  return <p className="line-clamp-2">{caption?.text ?? ""}</p>;
+}
+
+/** A quiet round glass button with a tooltip-style label; ≥44px touch target. */
+function RoundButton({ label, icon, onClick, tone = "plain", layoutId }: { label: string; icon: IconNode; onClick: () => void; tone?: "plain" | "stop"; layoutId?: string }) {
   return (
-    <button
+    <motion.button
+      type="button"
+      layoutId={layoutId}
       onClick={onClick}
-      title={label}
       aria-label={label}
-      aria-pressed={active}
+      title={label}
+      initial={layoutId ? false : { opacity: 0, scale: 0.6 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.6, transition: { duration: duration.fast } }}
+      whileHover={{ scale: 1.06 }}
+      whileTap={{ scale: 0.9 }}
+      transition={spring.snappy}
+      style={{ borderRadius: 999 }}
       className={clsx(
-        "grid h-9 w-9 place-items-center rounded-full transition",
-        active ? "bg-mint/12 text-mint ring-1 ring-mint/25" : "text-ivory-dim hover:bg-white/70 hover:text-ivory hover:shadow-[inset_0_1px_0_rgb(255_255_255)]",
+        "ghost-chip group relative grid h-11 w-11 place-items-center transition-colors duration-150",
+        tone === "stop" ? "text-coral" : "text-fg-2 hover:bg-white/90 hover:text-fg",
       )}
     >
-      {children}
-    </button>
+      <Icon icon={icon} size={18} strokeWidth={1.9} spring="snappy" />
+      <span className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-fg px-2 py-1 text-micro font-medium tracking-normal text-fg-inverse opacity-0 shadow-pop transition-opacity duration-150 group-hover:opacity-100 sm:block">
+        {label}
+      </span>
+    </motion.button>
   );
 }

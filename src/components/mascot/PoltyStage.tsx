@@ -18,13 +18,12 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
   const hero = useGhost((s) => s.widgets.length === 0 && s.ui.length === 0);
   const toolStatus = useGhost((s) => s.toolStatus);
 
-  const size = hero ? 196 : 128;
+  const size = hero ? 172 : 128;
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const sx = useSpring(x, { stiffness: 48, damping: 12, mass: 1.1 });
   const sy = useSpring(y, { stiffness: 48, damping: 12, mass: 1.1 });
   const sizeS = useSpring(size, { stiffness: 90, damping: 16 });
-  useEffect(() => sizeS.set(size), [size, sizeS]);
 
   const pointer = useRef({ x: 0, y: 0, t: 0 });
   const gazeRef = useRef({ x: 0, y: 0 });
@@ -32,7 +31,9 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
   const tetherGlowRef = useRef<SVGPathElement>(null);
   const [now, setNow] = useState(() => Date.now());
   const stateRef = useRef({ focusId, activity, hero, possess, size });
-  stateRef.current = { focusId, activity, hero, possess, size };
+  useEffect(() => {
+    stateRef.current = { focusId, activity, hero, possess, size };
+  });
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => (pointer.current = { x: e.clientX, y: e.clientY, t: performance.now() });
@@ -53,13 +54,22 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
     let raf = 0;
     const t0 = performance.now();
     x.jump(window.innerWidth / 2);
-    y.jump(window.innerHeight * 0.38);
+    y.jump(window.innerHeight * 0.3);
+    let lastSize = 0;
     const tick = (tNow: number) => {
       const t = (tNow - t0) / 1000;
-      const { focusId: fid, activity: act, hero: isHero, possess: pos, size: sz } = stateRef.current;
+      const { focusId: fid, activity: act, hero: isHero, possess: pos, size: baseSize } = stateRef.current;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const compact = vw < 760;
+      // The hero reserves a slot for Polty; the dock's top edge is the floor everywhere else.
+      const anchor = isHero ? (document.querySelector("[data-polty-anchor]") as HTMLElement | null)?.getBoundingClientRect() : null;
+      const dockTop = (document.querySelector("[data-voice-dock]") as HTMLElement | null)?.getBoundingClientRect().top ?? vh - 200;
+      const sz = anchor && anchor.width > 0 ? anchor.width : baseSize;
+      if (sz !== lastSize) {
+        sizeS.set(sz);
+        lastSize = sz;
+      }
       let tx: number;
       let ty: number;
       let look: { x: number; y: number } | null = null;
@@ -69,23 +79,24 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
       const r = el?.getBoundingClientRect();
 
       if (isHero) {
-        tx = vw / 2 + Math.sin(t * 0.5) * 14;
-        ty = vh * (compact ? 0.24 : 0.25) + Math.sin(t * 0.8) * 6;
+        tx = (anchor ? anchor.left + anchor.width / 2 : vw / 2) + Math.sin(t * 0.5) * 10;
+        ty = (anchor ? anchor.top + anchor.height / 2 : vh * 0.25) + Math.sin(t * 0.8) * 5;
       } else if (r && r.width > 0 && r.bottom > 60 && r.top < vh - 80) {
         // Peek over the widget's left edge (the canvas keeps a rail on the left for Polty).
         const fits = r.left > sz * 0.9;
         tx = r.left - (fits ? sz * 0.36 : sz * 0.08);
         tx = Math.min(vw - sz * 0.45, Math.max(sz * 0.45, tx));
-        ty = Math.min(vh - 180, Math.max(110, r.top + Math.min(r.height * 0.35, 140)));
+        ty = Math.min(dockTop - sz * 0.4, Math.max(110, r.top + Math.min(r.height * 0.35, 140)));
         look = { x: Math.max(-1, Math.min(1, ((r.left + r.width / 2 - tx) / 300))), y: Math.max(-1, Math.min(1, (r.top + r.height / 2 - ty) / 300)) };
       } else if (act === "listening") {
-        tx = vw / 2 + Math.sin(t * 0.9) * 10;
-        ty = vh - (compact ? 230 : 250);
-        look = { x: 0, y: 0.25 };
+        // Lean in over the dock while you talk.
+        tx = vw / 2 + (compact ? -sz * 0.9 : -sz * 1.6) + Math.sin(t * 0.9) * 8;
+        ty = dockTop - sz * 0.15 + Math.sin(t * 1.1) * 4;
+        look = { x: compact ? 0.5 : 0.7, y: 0.35 };
       } else {
-        // Home: lower-left corner, lazily wandering.
-        tx = (compact ? vw * 0.18 : 120) + Math.sin(t * 0.37) * 26 + Math.sin(t * 0.91) * 8;
-        ty = vh - (compact ? 230 : 250) + Math.sin(t * 0.53) * 16;
+        // Home: lower-left corner above the dock, lazily wandering.
+        tx = (compact ? vw * 0.16 : 120) + Math.sin(t * 0.37) * 22 + Math.sin(t * 0.91) * 7;
+        ty = dockTop - sz * (compact ? 0.42 : 0.5) + Math.sin(t * 0.53) * 12;
       }
       x.set(tx);
       y.set(ty);
@@ -188,10 +199,10 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
                 initial={{ opacity: 0, y: 6, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                className="ghost-chip absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 font-mono text-[11px] font-medium text-ivory"
+                className="ghost-chip absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-caption font-medium text-fg"
               >
-                <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${possessing ? "bg-mint animate-pulse" : "bg-violet"}`} />
-                {possessing ? `possessing · ${possess?.label}` : toolStatus}
+                <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${possessing ? "bg-mint animate-pulse" : "bg-violet animate-pulse"}`} />
+                {possessing ? `Possessing ${possess?.label}` : toolStatus}
               </motion.div>
             )}
           </AnimatePresence>

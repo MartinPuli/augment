@@ -2,22 +2,30 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
+// Icon *data* from "lucide" (drawn by the morphing <Icon />), not lucide-react components.
 import {
   Boxes,
+  CalendarDays,
   Cctv,
   FileText,
   Gauge,
   Globe,
   Image as ImageIcon,
   KeyRound,
+  List,
+  Map as MapIcon,
+  Newspaper,
   Plug,
   QrCode,
   Radar,
   Search,
-  Workflow,
+  SquarePlay,
+  Sun,
   Timer,
-  type LucideIcon,
-} from "lucide-react";
+  TrainFront,
+  Workflow,
+} from "lucide";
+import type { IconNode } from "@/components/ui/Icon";
 import type { WidgetComponentProps } from "./types";
 import { DeviceListWidget, ImageWidget, LeaseWidget, MetricWidget, MissionWidget, NoteWidget, ResultsWidget, WebViewWidget } from "./widgets/core";
 
@@ -25,7 +33,13 @@ import { DeviceListWidget, ImageWidget, LeaseWidget, MetricWidget, MissionWidget
 type AnyWidget = ComponentType<WidgetComponentProps<any>>;
 
 function Loading() {
-  return <div className="h-28 animate-pulse rounded-2xl bg-ink-3/70" />;
+  return (
+    <div className="flex flex-col gap-2.5" aria-busy="true">
+      <div className="ghost-skeleton h-24 rounded-tile" />
+      <div className="ghost-skeleton h-3 w-2/3 rounded-full" />
+      <div className="ghost-skeleton h-3 w-1/2 rounded-full" />
+    </div>
+  );
 }
 
 /** Widgets owned by other modules are code-split; they accept either a default or a named export. */
@@ -56,7 +70,7 @@ const NetworkScanWidget = lazy(() => import("./widgets/NetworkScanWidget"), "Net
 
 export interface WidgetEntry {
   component: AnyWidget;
-  icon: LucideIcon;
+  icon: IconNode;
   size: "sm" | "md" | "lg" | "xl";
   label: string;
 }
@@ -75,11 +89,11 @@ export const WIDGETS: Record<string, WidgetEntry> = {
   results: { component: ResultsWidget, icon: Search, size: "md", label: "Results" },
   mission: { component: MissionWidget, icon: Workflow, size: "lg", label: "Mission" },
   timer: { component: TimerWidget, icon: Timer, size: "sm", label: "Timer" },
-  weather: { component: WeatherWidget, icon: Globe, size: "md", label: "Weather" },
-  news: { component: NewsWidget, icon: FileText, size: "md", label: "News" },
-  youtube: { component: YouTubeWidget, icon: Globe, size: "lg", label: "YouTube" },
-  agenda: { component: AgendaWidget, icon: FileText, size: "md", label: "Agenda" },
-  departures: { component: DeparturesWidget, icon: Workflow, size: "md", label: "Departures" },
-  map: { component: MapWidget, icon: Globe, size: "lg", label: "Map" },
-  list: { component: ListWidget, icon: Search, size: "md", label: "Results" },
+  weather: { component: WeatherWidget, icon: Sun, size: "md", label: "Weather" },
+  news: { component: NewsWidget, icon: Newspaper, size: "md", label: "News" },
+  youtube: { component: YouTubeWidget, icon: SquarePlay, size: "lg", label: "YouTube" },
+  agenda: { component: AgendaWidget, icon: CalendarDays, size: "md", label: "Agenda" },
+  departures: { component: DeparturesWidget, icon: TrainFront, size: "md", label: "Departures" },
+  map: { component: MapWidget, icon: MapIcon, size: "lg", label: "Map" },
+  list: { component: ListWidget, icon: List, size: "md", label: "Results" },
 };

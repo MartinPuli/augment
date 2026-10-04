@@ -1,0 +1,6 @@
+# Licensed fonts (Tiempos test fonts, Maison Neue) are never committed: this repo is public.
+# Drop the files here locally; see README.md in this folder for the expected names.
+*.otf
+*.ttf
+*.woff
+*.woff2
