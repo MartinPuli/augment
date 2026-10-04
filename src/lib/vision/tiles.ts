@@ -8,9 +8,8 @@ import { nms } from "./postprocess";
 import type { Box } from "./tracker";
 import type { Detection } from "./types";
 
-export interface Tile extends Box {
-  /** Integer pixel region in the source frame. */
-}
+/** Integer pixel region in the source frame. */
+export type Tile = Box;
 
 function clampTile(b: Box, fw: number, fh: number): Tile {
   const w = Math.max(32, Math.min(fw, Math.round(b.w)));

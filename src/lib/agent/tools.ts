@@ -150,7 +150,7 @@ export const TOOL_DEFS: ToolDef[] = [
 - metric {label, value, unit?, sublabel?, observed_at?, source?, trend?: number[]}: a big reading.
 - device_list {query?, refs?: string[]}: capability cards.
 - lease {lease_id | offer_id}: live offer/lease card with terms, timer and Stop access.
-- live_view {source: LiveSource, track?: {enabled?: boolean, classes?: string[], follow?: boolean|number, max_zoom?: number}, title?}: live video with YOLO object tracking and auto-zoom. LiveSource is {kind:'hls',url} | {kind:'webrtc',device_id} | {kind:'local_camera'} | {kind:'image_poll',url,interval_ms} | {kind:'mjpeg',url}.
+- live_view {source: LiveSource, track?: {enabled?: boolean, classes?: string[], follow?: boolean|number, max_zoom?: number, model?: 'dfine-n'|'yolov10n'}, title?}: live video with in-browser real-time object detection (D-FINE-N by default; YOLOv10n optional), multi-object tracking and an auto-zoom follow-cam. LiveSource is {kind:'hls',url} | {kind:'webrtc',device_id} | {kind:'local_camera'} | {kind:'image_poll',url,interval_ms} | {kind:'mjpeg',url}.
 - pair_phone {}: QR code to pair a phone as a device.
 - connect_hardware {transport?: 'bluetooth'|'serial'|'webcam'|'microphone'|'any', reason?}: buttons for the user to connect hardware (browsers require a user click).
 - network_scan {autoScan?: boolean}: Wi-Fi device radar.

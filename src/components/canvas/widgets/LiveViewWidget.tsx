@@ -92,14 +92,33 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
   const backendPref = props.track?.backend ?? "auto";
   const title = props.title ?? (source && "title" in source ? source.title : undefined) ?? "Live view";
 
-  const [phase, setPhase] = useState<Phase>("connecting");
-  const [errorText, setErrorText] = useState<string | null>(null);
-  const [modelPhase, setModelPhase] = useState<ModelPhase>("off");
+  const [phaseState, setPhase] = useState<Phase>("connecting");
+  const [errorState, setErrorText] = useState<string | null>(null);
+  const [modelPhase, setModelPhase] = useState<ModelPhase>(trackOn ? "loading" : "off");
   const [modelProgress, setModelProgress] = useState(0);
   const [modelError, setModelError] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
   const [aspect, setAspect] = useState(16 / 9);
   const [retry, setRetry] = useState(0);
+  const phase: Phase = source ? phaseState : "error";
+  const errorText = source ? errorState : "No source";
+
+  // reset per-session UI state when the source or detector config changes (render-time reset pattern)
+  const sessionKey = `${srcKey}#${retry}`;
+  const [prevSession, setPrevSession] = useState(sessionKey);
+  if (prevSession !== sessionKey) {
+    setPrevSession(sessionKey);
+    setPhase("connecting");
+    setErrorText(null);
+  }
+  const detKey = `${trackOn}|${modelId}|${backendPref}`;
+  const [prevDetKey, setPrevDetKey] = useState(detKey);
+  if (prevDetKey !== detKey) {
+    setPrevDetKey(detKey);
+    setModelPhase(trackOn ? "loading" : "off");
+    setModelProgress(0);
+    setModelError(null);
+  }
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -111,7 +130,7 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
   const boxesRef = useRef<Map<number, Box>>(new Map());
   const hoverRef = useRef<number | null>(null);
   const lockAnimRef = useRef<{ at: number; text: string; color: string } | null>(null);
-  const counters = useRef({ frames: 0, dets: 0, since: performance.now(), inferMs: 0, passes: 1 });
+  const counters = useRef({ frames: 0, dets: 0, since: 0, inferMs: 0, passes: 1 });
   const liveRef = useRef<Stats>(EMPTY_STATS);
   const reportRef = useRef(report);
   const emitRef = useRef(emit);
@@ -142,15 +161,9 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
 
   /* ---------------- source ---------------- */
   useEffect(() => {
-    if (!source) {
-      setPhase("error");
-      setErrorText("No source");
-      return;
-    }
+    if (!srcKey) return;
     let cancelled = false;
     let attached: AttachedSource | null = null;
-    setPhase("connecting");
-    setErrorText(null);
     const src = JSON.parse(srcKey) as LiveSource;
     // stills update slowly: keep tracks alive between frames
     const slow = src.kind === "image_poll" ? Math.max(1000, src.interval_ms || 2000) : 0;
@@ -185,19 +198,12 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
       attached?.close();
       if (srcRef.current === attached) srcRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [srcKey, retry]);
 
   /* ---------------- detector ---------------- */
   useEffect(() => {
-    if (!trackOn) {
-      setModelPhase("off");
-      return;
-    }
+    if (!trackOn) return;
     let cancelled = false;
-    setModelPhase("loading");
-    setModelProgress(0);
-    setModelError(null);
     const det = createDetector({
       model: modelId,
       backend: backendPref,
@@ -399,6 +405,7 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
   /* ---------------- UI sync (4 Hz) + agent report (1 Hz) ---------------- */
   useEffect(() => {
     let lastReport = 0;
+    counters.current.since = performance.now();
     const iv = window.setInterval(() => {
       const now = performance.now();
       const c = counters.current;

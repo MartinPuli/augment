@@ -20,7 +20,7 @@ devices, with permission, and shows you what it sees on a generative canvas.
 
 | You say | What happens |
 | --- | --- |
-| "Find a live camera on the Bay Bridge and track the trucks." | Polty searches 756 Caltrans cameras, opens a live HLS stream on the canvas, runs an object detector **in your browser**, locks onto a truck and auto-zooms a follow-cam. |
+| "Find a live camera on the Bay Bridge and track the trucks." | Polty searches 756 Caltrans cameras, opens a live HLS stream on the canvas, runs a real-time object detector (D-FINE-N, Apache-2.0; YOLOv10n optional) **in your browser**, locks onto a truck and auto-zooms a follow-cam. |
 | "Pair my phone so you can see and hear through it." | A QR code appears. Your phone opens `/join`, you confirm it on the laptop, and the phone becomes a body: camera, microphone, speaker, screen, haptics, motion, location, torch. |
 | "What's on my Wi-Fi? Turn the lights purple." | A radar scans mDNS / SSDP / Kasa discovery, fingerprints Shelly, WLED, Hue, Kasa, Elgato, Tasmota, Roku and Home Assistant, publishes what it can drive, and switches them. |
 | "Connect my Arduino and wave the servo." | You click once (browsers require it), Web Serial opens, the board announces its capabilities over the GHOST serial protocol, Polty moves the servo. Same for Bluetooth LE lights and heart-rate straps. |
@@ -62,7 +62,7 @@ flowchart LR
     G -- WSS --> PH[Phone /join<br/>camera · mic · haptics]
     G -- WSS --> PI[Raspberry Pi<br/>servo · camera]
     G --> A[In-process adapters<br/>Caltrans · NOAA · LAN · Kernel]
-    P --> C[Generative canvas<br/>live view + YOLO-class detector]
+    P --> C[Generative canvas<br/>live view + real-time detector<br/>(D-FINE-N · YOLOv10n)]
 ```
 
 - `server.ts` — one Node server: Next.js UI + coordinator API (`/api/v1`) + MCP (`/mcp`) + device

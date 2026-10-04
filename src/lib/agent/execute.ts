@@ -259,7 +259,7 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
           });
           possess(widgetId, label);
           summary.widget_id = widgetId;
-          summary.hint = "Live view is on the canvas with YOLO tracking. Use canvas_read on the widget for counts/target, canvas_update to change classes or lock a track id.";
+          summary.hint = "Live view is on the canvas with real-time object detection and tracking. Use canvas_read on the widget for counts/target, canvas_update to change classes or lock a track id.";
         }
         if ((obs?.kind === "value" || obs?.kind === "state") && !live && show) {
           const widgetId = `metric-${ref.device_id}-${ref.capability_id}`;
