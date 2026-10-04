@@ -93,7 +93,15 @@ function useCoordinatorSync() {
         if (Array.isArray(list)) set({ devices: Object.fromEntries(list.map((d) => [d.device_id, d])) });
         if (Array.isArray(leases)) set({ leases: Object.fromEntries(leases.map((l) => [l.lease_id, l])) });
       })
-      .catch(() => set({ error: "Coordinator unreachable. Start it with `pnpm dev`." }));
+      .catch(() => {
+        // Locally the fix is to start the server; a hosted UI (e.g. Vercel) needs a coordinator origin.
+        const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+        set({
+          error: local
+            ? "Coordinator unreachable. Start it with `pnpm dev`."
+            : "This deployment isn't connected to a GHOST coordinator. Set GHOST_COORDINATOR_ORIGIN on the host to enable devices, leases and connectors.",
+        });
+      });
 
     // The desktop tab is itself a connector (this laptop's webcam/mic, Bluetooth and USB devices,
     // and the viewer side of phone live streams).
