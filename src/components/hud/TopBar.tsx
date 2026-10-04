@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Blocks, Brain, KeyRound, Zap } from "lucide";
 import { useGhost } from "@/lib/store";
 import ConnectorsPanel from "@/components/connectors/ConnectorsPanel";
+import { WorkspaceToggle } from "@/components/workspace/Workspace";
 import { Icon, type IconNode } from "@/components/ui/Icon";
 import { ease, haptic, spring } from "@/components/ui/motion";
 
@@ -34,7 +35,7 @@ export function TopBar() {
   const remaining = Math.max(0, budget.limit_cents - budget.spent_cents);
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-end gap-2 px-3 pt-[max(12px,env(safe-area-inset-top))] sm:px-5 sm:pt-4">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-end gap-1.5 px-3 sm:gap-2 pt-[max(12px,env(safe-area-inset-top))] sm:px-5 sm:pt-4">
       <AnimatePresence initial={false}>
         {budget.goal && (
           <motion.div
@@ -74,6 +75,7 @@ export function TopBar() {
           </motion.span>
         )}
       </AnimatePresence>
+      <WorkspaceToggle />
       <div className="grid h-10 w-10 shrink-0 place-items-center">
         {!connOpen && (
           <motion.button
@@ -146,7 +148,7 @@ function BrainToggle() {
               useGhost.getState().set({ brain: o.id });
             }}
             className={clsx(
-              "relative z-10 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-medium transition-colors duration-150",
+              "relative z-10 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-caption font-medium transition-colors duration-150 min-[420px]:px-3",
               on ? "text-fg-inverse" : "text-fg-2 hover:text-fg",
             )}
           >
@@ -158,7 +160,7 @@ function BrainToggle() {
               />
             )}
             <Icon icon={o.icon} size={13} strokeWidth={2.2} />
-            <span>{o.label}</span>
+            <span className="hidden min-[420px]:inline">{o.label}</span>
           </button>
         );
       })}

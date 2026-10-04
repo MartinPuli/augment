@@ -65,7 +65,8 @@ function geometry(vw: number) {
   const wide = vw >= 1024;
   const boardW = Math.min(1120, vw - (wide ? 288 : vw >= 640 ? 64 : 24));
   const gap = vw >= 640 ? 120 : 28;
-  return { boardW, cell: boardW + gap, top: vw >= 640 ? 84 : 68, shift: wide ? 40 : 0 };
+  // phones: the task chips get their own row under the top bar
+  return { boardW, cell: boardW + gap, top: vw >= 640 ? 84 : 112, shift: wide ? 40 : 0 };
 }
 
 const rubber = (v: number, min: number, max: number) => (v < min ? min - (min - v) * RUBBER : v > max ? max + (v - max) * RUBBER : v);
@@ -405,7 +406,7 @@ function TaskChips({ tasks, active, onPick }: { tasks: Task[]; active: number; o
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8, transition: { duration: duration.fast } }}
           transition={spring.gentle}
-          className="ghost-chip ghost-scroll fixed left-3 top-[max(12px,env(safe-area-inset-top))] z-40 flex h-10 max-w-[calc(100vw-196px)] items-center gap-0.5 overflow-x-auto rounded-full p-1 sm:left-5 sm:top-4 sm:max-w-[min(560px,calc(100vw-260px))]"
+          className="ghost-chip ghost-scroll fixed left-3 top-[max(60px,calc(env(safe-area-inset-top)+52px))] z-40 flex h-10 max-w-[calc(100vw-24px)] items-center gap-0.5 overflow-x-auto rounded-full p-1 sm:left-5 sm:top-4 sm:max-w-[min(560px,calc(100vw-420px))]"
         >
           {tasks.map((t, i) => {
             const on = i === active;

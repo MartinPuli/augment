@@ -272,41 +272,49 @@ body {
 }
 
 /* ---------- Nature backdrop ---------- */
-/* Warm dawn gradient: shown while the footage loads, and instead of it if it can't. */
+/* Clean warm base with soft light: shown under the footage, and instead of it if it can't load. */
 .ghost-bg-fallback {
   background:
-    radial-gradient(60% 50% at 20% 15%, rgb(255 255 255 / 0.9), transparent 70%),
-    radial-gradient(55% 45% at 82% 18%, rgb(222 228 240 / 0.95), transparent 70%),
-    radial-gradient(60% 50% at 50% 55%, rgb(244 230 226 / 0.85), transparent 70%),
-    radial-gradient(70% 55% at 75% 100%, rgb(214 224 232 / 0.9), transparent 70%),
-    radial-gradient(60% 50% at 8% 92%, rgb(220 234 230 / 0.9), transparent 70%),
-    linear-gradient(180deg, #eef0f2 0%, #f4efea 50%, #e6ebee 100%);
+    radial-gradient(60% 50% at 18% 12%, rgb(255 255 255 / 0.95), transparent 70%),
+    radial-gradient(70% 55% at 80% 100%, rgb(240 236 228 / 0.9), transparent 70%),
+    linear-gradient(180deg, #f8f7f3 0%, #f4f2ec 55%, #efede6 100%);
 }
-/* The footage is a live wallpaper, not a feature: heavily softened into luminous colour. */
+/* The footage is a live wallpaper, not a feature: softened into luminous colour. */
 .ghost-bg-media {
-  filter: blur(28px) saturate(1.15) brightness(1.14) contrast(0.92);
+  filter: blur(30px) saturate(1.35) brightness(1.18) contrast(0.88);
   transform: scale(1.12);
 }
-/* Faint light leaks so the field reads luminous, not overcast. */
-.ghost-bg-tint {
-  background:
-    radial-gradient(55% 45% at 12% 18%, rgb(236 232 252 / 0.36), transparent 70%),
-    radial-gradient(50% 40% at 88% 14%, rgb(220 238 252 / 0.34), transparent 70%),
-    radial-gradient(60% 45% at 55% 62%, rgb(255 236 226 / 0.26), transparent 70%),
-    radial-gradient(55% 45% at 90% 92%, rgb(216 248 240 / 0.34), transparent 70%);
-}
-/* Warm white wash: calm and even, a touch stronger behind the top bar and the dock. */
+/* Calm, even warm-white wash. */
 .ghost-bg-wash {
   background: linear-gradient(
     180deg,
-    rgb(248 247 243 / 0.62) 0%,
-    rgb(248 247 243 / 0.42) 22%,
-    rgb(248 247 243 / 0.36) 55%,
-    rgb(248 247 243 / 0.5) 82%,
-    rgb(248 247 243 / 0.66) 100%
+    rgb(249 248 244 / 0.55) 0%,
+    rgb(249 248 244 / 0.4) 30%,
+    rgb(249 248 244 / 0.4) 65%,
+    rgb(249 248 244 / 0.62) 100%
   );
+}
+/* Subtle glows (mint, lavender, peach) drifting very slowly: light, not colour blocks. */
+.ghost-bg-glow {
+  background:
+    radial-gradient(32% 30% at 82% 14%, rgb(94 234 212 / 0.2), transparent 70%),
+    radial-gradient(30% 34% at 10% 42%, rgb(196 181 253 / 0.2), transparent 70%),
+    radial-gradient(36% 30% at 55% 96%, rgb(253 186 140 / 0.16), transparent 70%),
+    radial-gradient(26% 24% at 46% 30%, rgb(255 255 255 / 0.55), transparent 70%);
+  animation: ghost-glow-drift 38s ease-in-out infinite alternate;
+}
+@keyframes ghost-glow-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2.5%, 1.5%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(2%, -1.5%, 0) scale(1.02);
+  }
 }
 /* Very soft vignette for depth. */
 .ghost-bg-vignette {
-  background: radial-gradient(130% 100% at 50% 40%, transparent 62%, rgb(40 36 30 / 0.08) 100%);
+  background: radial-gradient(130% 100% at 50% 40%, transparent 65%, rgb(60 50 40 / 0.06) 100%);
 }
