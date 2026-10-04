@@ -10,7 +10,7 @@ import { TOOL_DEFS } from "./tools";
  */
 const API = "https://api.elevenlabs.io/v1/convai";
 const CACHE = path.join(process.cwd(), ".ghost", "convai.json");
-const VERSION = 3; // bump to push prompt/tool changes to the hosted agent
+const VERSION = 4; // bump to push prompt/tool changes to the hosted agent
 
 type JS = Record<string, unknown>;
 

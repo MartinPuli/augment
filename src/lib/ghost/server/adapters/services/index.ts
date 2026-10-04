@@ -4,6 +4,7 @@ import { calendarService } from "./calendar";
 import { cryptoService } from "./crypto";
 import { earthquakesService } from "./earthquakes";
 import { geocodeService } from "./geocode";
+import { googleService } from "./google";
 import { newsService } from "./news";
 import { transitService } from "./transit";
 import { weatherService } from "./weather";
@@ -22,4 +23,5 @@ export const serviceAdapters: InternalAdapter[] = [
   earthquakesService,
   cryptoService,
   geocodeService,
+  googleService,
 ];
