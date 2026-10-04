@@ -144,8 +144,15 @@ See [docs/connectors.md](docs/connectors.md), [docs/smart-home.md](docs/smart-ho
 
 ## Tests
 
+Open `/devices` to connect hardware without an agent model key, select built-in/USB/paired Bluetooth
+microphones, and see remembered devices. Connection recipes and actual invocation history are
+available to Polty and external MCP clients through `recall_device_connections`.
+See [docs/device-memory.md](docs/device-memory.md) for setup, TV support and persistence limits.
+
 ```bash
 pnpm coord:smoke          # 75 coordinator checks: leases, exclusivity, budget, expiry, revoke, MCP…
+pnpm devices:memory-test  # connection memory survives a disk-backed coordinator restart; simulated hardware
+pnpm exec tsx scripts/microphone-selection-test.ts  # exact audio-input selection; browser API test doubles
 pnpm infra:mission-test   # Mastra mission end-to-end against a real coordinator
 pnpm exec tsx scripts/lan-test.ts   # smart-home drivers against simulators
 ```

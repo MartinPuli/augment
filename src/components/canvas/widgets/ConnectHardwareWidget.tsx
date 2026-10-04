@@ -29,6 +29,7 @@ import { microphoneSupport } from "@/lib/connector/drivers/microphone";
 import { speakerSupport } from "@/lib/connector/drivers/speaker";
 import type { PublishedDeviceInfo } from "@/lib/connector/types";
 import type { WidgetComponentProps } from "../types";
+import { MicrophoneInputPicker, useMicrophoneInput } from "@/components/devices/MicrophoneInputPicker";
 
 type TransportProp = "bluetooth" | "serial" | "webcam" | "microphone" | "any";
 type Action = "bluetooth" | "serial" | "webcam" | "microphone" | "speaker";
@@ -43,7 +44,7 @@ const ACTIONS: Record<Action, { label: string; sub: string; icon: ComponentType<
   bluetooth: { label: "Bluetooth device", sub: "LED strip, bulb, heart-rate strap…", icon: Bluetooth, transport: "bluetooth" },
   serial: { label: "USB serial board", sub: "Arduino / ESP32 speaking GHOST serial", icon: Usb, transport: "serial" },
   webcam: { label: "This laptop's webcam", sub: "Snapshots + live view", icon: Camera, transport: "browser (webcam)" },
-  microphone: { label: "This laptop's microphone", sub: "Sound level, short clips", icon: Mic, transport: "browser (microphone)" },
+  microphone: { label: "Microphone", sub: "Built-in, USB or paired Bluetooth audio input", icon: Mic, transport: "browser (microphone)" },
   speaker: { label: "This laptop's speaker", sub: "Speech and chimes", icon: Volume2, transport: "browser (speaker)" },
 };
 
@@ -77,6 +78,7 @@ function isCancel(msg: string) {
 
 export default function ConnectHardwareWidget({ props, report, emit }: WidgetComponentProps<ConnectHardwareProps>) {
   const lc = useLocalConnector();
+  const micInput = useMicrophoneInput(lc.laptop.microphone);
   const isClient = useIsClient();
   const [busy, setBusy] = useState<Action | null>(null);
   const [msg, setMsg] = useState<{ tone: "error" | "info"; text: string } | null>(null);
@@ -101,7 +103,7 @@ export default function ConnectHardwareWidget({ props, report, emit }: WidgetCom
             : a === "webcam"
               ? lc.enableWebcam()
               : a === "microphone"
-                ? lc.enableMicrophone()
+                ? lc.enableMicrophone({ deviceId: micInput.deviceId || undefined })
                 : lc.enableSpeaker();
     } catch (e) {
       setMsg({ tone: "error", text: e instanceof Error ? e.message : String(e) });
@@ -146,6 +148,10 @@ export default function ConnectHardwareWidget({ props, report, emit }: WidgetCom
         </p>
       )}
 
+      {actions.includes("microphone") && <>
+        <MicrophoneInputPicker input={micInput} active={lc.laptop.microphone} activeLabel={lc.microphone_input_label} />
+        {lc.laptop.microphone && <button type="button" onClick={() => void lc.disableLaptopModule("microphone")} className="self-start rounded-lg border border-line px-3 py-1 text-[12px] text-ivory-dim">Turn off microphone</button>}
+      </>}
       <div className={clsx("grid gap-2", actions.length > 1 ? "sm:grid-cols-2" : "")}>
         {actions.map((a) => {
           const A = ACTIONS[a];

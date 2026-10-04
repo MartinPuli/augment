@@ -108,6 +108,13 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
   try {
     switch (name) {
       /* ---------------- discovery ---------------- */
+      case "recall_device_connections": {
+        const qs = new URLSearchParams();
+        if (input.query) qs.set("q", String(input.query));
+        if (input.device_id) qs.set("device_id", String(input.device_id));
+        qs.set("limit", String(input.limit ?? 5));
+        return ok(await ghost(`/device-connections?${qs}`));
+      }
       case "search_capabilities": {
         const qs = new URLSearchParams();
         if (input.query) qs.set("q", String(input.query));

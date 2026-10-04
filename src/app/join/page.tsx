@@ -54,6 +54,7 @@ import {
   motionSupport,
 } from "@/lib/connector/drivers/sensors";
 import { Ghost, type GhostMood } from "./Ghost";
+import { MicrophoneInputPicker, useMicrophoneInput } from "@/components/devices/MicrophoneInputPicker";
 
 type SensorId = "camera" | "microphone" | "speaker" | "display" | "haptics" | "motion" | "location" | "torch" | "battery";
 type SensorState = "off" | "asking" | "on" | "error";
@@ -164,6 +165,7 @@ export default function JoinPage() {
 
   const connRef = useRef<GhostConnector | null>(null);
   const modulesRef = useRef(new Map<SensorId, CapabilityModule>());
+  const micInput = useMicrophoneInput(sensors.microphone === "on");
   const publishedRef = useRef(false);
   const nameRef = useRef(name);
   const wakeRef = useRef<WakeLockLike | null>(null);
@@ -323,7 +325,7 @@ export default function JoinPage() {
           });
           break;
         case "microphone":
-          pending = enableMicrophone();
+          pending = enableMicrophone({ deviceId: micInput.deviceId || undefined });
           break;
         case "speaker":
           pending = enableSpeaker({ onSpeak: setSpeaking });
@@ -579,6 +581,7 @@ export default function JoinPage() {
                   />
                 ))}
               </ul>
+              {support.microphone?.supported && <div className="mt-3"><MicrophoneInputPicker input={micInput} active={sensors.microphone === "on"} activeLabel={modulesRef.current.get("microphone")?.connection?.input_label} /></div>}
               <div className="sticky bottom-0 -mx-5 mt-5 bg-gradient-to-t from-ink via-ink/95 to-transparent px-5 pb-1 pt-6">
                 <button
                   onClick={publishDevice}

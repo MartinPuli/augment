@@ -34,6 +34,7 @@ export interface LocalConnectorState {
   connector_id: string | null;
   devices: PublishedDeviceInfo[];
   laptop: Record<LaptopModuleId, boolean>;
+  microphone_input_label: string | null;
   active: ActiveInvocation[];
 }
 
@@ -44,6 +45,7 @@ const INITIAL: LocalConnectorState = {
   connector_id: null,
   devices: [],
   laptop: { camera: false, microphone: false, speaker: false },
+  microphone_input_label: null,
   active: [],
 };
 
@@ -67,6 +69,7 @@ function syncFromConnector() {
     connector_id: s.connector_id,
     devices: s.devices,
     active: s.active,
+    microphone_input_label: laptopModules.get("microphone")?.connection?.input_label ?? null,
     laptop: {
       camera: laptopModules.has("camera"),
       microphone: laptopModules.has("microphone"),
@@ -199,8 +202,8 @@ export function enableWebcam() {
   );
 }
 
-export function enableMicrophone() {
-  return addLaptopModule("microphone", () => enableMicModule());
+export function enableMicrophone(opts?: { deviceId?: string }) {
+  return addLaptopModule("microphone", () => enableMicModule(opts));
 }
 
 export function enableSpeaker() {
