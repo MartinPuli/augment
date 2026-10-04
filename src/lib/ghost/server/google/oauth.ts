@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { db } from "../db";
 
 /**
@@ -43,23 +43,37 @@ export function redirectUri(): string {
 
 /* ---------------- state (CSRF), bound to the principal ---------------- */
 
-const pendingStates = new Map<string, { principal_id: string; exp: number }>();
-
-export function newState(principal_id: string): string {
-  const now = Date.now();
-  for (const [k, v] of pendingStates) if (v.exp < now) pendingStates.delete(k);
-  const s = randomBytes(24).toString("base64url");
-  pendingStates.set(s, { principal_id, exp: now + 10 * 60_000 });
-  return s;
+// Signed, self-contained state: survives server restarts and works when the callback lands on a
+// different origin (localhost vs tunnel) than the page that started sign-in.
+function stateKey(): Buffer {
+  return createHash("sha256").update(`ghost-oauth:${env("GHOST_SECRET") ?? ""}:${env("GOOGLE_CLIENT_SECRET") ?? ""}`).digest();
 }
 
-/** Consume a state; returns the principal it was issued to, or null. */
+export function newState(principal_id: string, return_to?: string): string {
+  const payload = Buffer.from(JSON.stringify({ p: principal_id, e: Date.now() + 15 * 60_000, r: return_to ?? null, n: randomBytes(8).toString("hex") })).toString("base64url");
+  const sig = createHmac("sha256", stateKey()).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+/** Verify a state; returns the principal it was issued to (and where to return), or null. */
 export function takeState(state: string | undefined | null): string | null {
+  return readState(state)?.principal_id ?? null;
+}
+
+export function readState(state: string | undefined | null): { principal_id: string; return_to: string | null } | null {
   if (!state) return null;
-  const v = pendingStates.get(state);
-  pendingStates.delete(state);
-  if (!v || v.exp < Date.now()) return null;
-  return v.principal_id;
+  const [payload, sig] = state.split(".");
+  if (!payload || !sig) return null;
+  const want = createHmac("sha256", stateKey()).update(payload).digest();
+  const got = Buffer.from(sig, "base64url");
+  if (got.length !== want.length || !timingSafeEqual(got, want)) return null;
+  try {
+    const v = JSON.parse(Buffer.from(payload, "base64url").toString()) as { p: string; e: number; r: string | null };
+    if (!v.p || v.e < Date.now()) return null;
+    return { principal_id: v.p, return_to: v.r };
+  } catch {
+    return null;
+  }
 }
 
 export function consentUrl(state: string): string {
