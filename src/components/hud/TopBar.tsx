@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
+
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { motion } from "motion/react";
-import { Brain, Cpu, KeyRound, RotateCcw, Settings2, Wallet, Zap } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { Brain, KeyRound, Zap } from "lucide";
 import { useGhost } from "@/lib/store";
-import { resetSession } from "@/lib/agent/runtime";
-import { PoltyGlyph } from "@/components/mascot/Polty";
+import { Icon, type IconNode } from "@/components/ui/Icon";
+import { ease, haptic, spring } from "@/components/ui/motion";
 
+/**
+ * Deliberately quiet: only the brain switch is always there (Connectors lives in the voice dock).
+ * Access and spending chips appear only while they matter (a lease is counting down, a budget is set).
+ */
 export function TopBar() {
   const me = useGhost((s) => s.me);
   const budget = useGhost((s) => s.budget);
-  const devices = useGhost((s) => s.devices);
   const leases = useGhost((s) => s.leases);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -20,8 +24,6 @@ export function TopBar() {
     return () => clearInterval(t);
   }, []);
 
-  const personal = Object.values(devices).filter((d) => !d.connector_id.startsWith("internal:") && d.online).length;
-  const publicCount = Object.values(devices).filter((d) => d.access_type === "public_observation").length;
   const active = Object.values(leases).filter((l) => l.state === "active" && l.ends_at && new Date(l.ends_at).getTime() > now);
   const soonest = active.reduce<number | null>((m, l) => {
     const r = new Date(l.ends_at!).getTime() - now;
@@ -30,76 +32,76 @@ export function TopBar() {
   const remaining = Math.max(0, budget.limit_cents - budget.spent_cents);
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-4 pt-[max(12px,env(safe-area-inset-top))] sm:px-6">
-      <div className="ghost-chip pointer-events-auto flex h-11 items-center gap-2.5 rounded-full pl-2 pr-4">
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-b from-[#2a2f36] to-[#121418] shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_4px_10px_-4px_rgb(15_23_42/0.5)]">
-          <PoltyGlyph size={20} />
-        </span>
-        <div className="leading-none">
-          <div className="font-display text-[14px] font-extrabold tracking-[0.2em] text-ivory sm:text-[15px]">GHOST</div>
-          <div className="mt-1 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-mute sm:block">give your agent a body</div>
-        </div>
-      </div>
-
-      {budget.goal && (
-        <div className="ghost-chip pointer-events-auto hidden h-11 max-w-[440px] flex-1 items-center gap-3 rounded-full px-4 md:flex">
-          <span className="truncate text-[12.5px] text-ivory">{budget.goal}</span>
-          <div className="ml-auto flex items-center gap-2">
-            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink-4">
-              <div className="h-full rounded-full bg-amber transition-all" style={{ width: `${Math.min(100, (budget.spent_cents / Math.max(1, budget.limit_cents)) * 100)}%` }} />
-            </div>
-            <span className="font-mono text-[11px] text-ivory-dim">${(remaining / 100).toFixed(2)} left</span>
-          </div>
-        </div>
-      )}
-
-      <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
-        <BrainToggle />
-        <Link href="/devices" aria-label="Connect devices"><Chip compact icon={<Cpu size={12} />} label={`${personal} ${personal === 1 ? "body" : "bodies"}`} title={`Connect devices · ${personal} personal devices online · ${publicCount} public sources`} tone={personal ? "mint" : "mute"} /></Link>
-        {active.length > 0 && <Chip icon={<KeyRound size={12} />} label={`${active.length} · ${Math.ceil((soonest ?? 0) / 1000)}s`} title="Active leases · time remaining" tone="mint" pulse />}
-        {me && <Chip icon={<Wallet size={12} />} label={`$${(me.balance_cents / 100).toFixed(2)}`} title="Development ledger — test funds, not real money" tone="amber" />}
-        <Link href="/owner" className="ghost-chip grid h-9 w-9 place-items-center rounded-full text-ivory-dim transition hover:bg-white/80 hover:text-ivory" title="Owner console" aria-label="Owner console">
-          <Settings2 size={15} />
-        </Link>
-        <button onClick={() => resetSession()} className="ghost-chip hidden h-9 w-9 place-items-center rounded-full text-ivory-dim transition hover:bg-white/80 hover:text-ivory sm:grid" title="New session" aria-label="New session">
-          <RotateCcw size={15} />
-        </button>
-      </div>
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-end gap-2 px-3 pt-[max(12px,env(safe-area-inset-top))] sm:px-5 sm:pt-4">
+      <AnimatePresence initial={false}>
+        {budget.goal && (
+          <motion.div
+            key="budget"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
+            transition={{ duration: 0.24, ease: ease.standard }}
+            className="ghost-chip pointer-events-auto mr-auto hidden h-10 min-w-0 max-w-[420px] items-center gap-3 rounded-full pl-4 pr-3 md:flex"
+            title={`Spending budget · ${me ? `ledger balance $${(me.balance_cents / 100).toFixed(2)} (test funds)` : "test funds"}`}
+          >
+            <span className="truncate text-body-sm text-fg">{budget.goal}</span>
+            <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-tint">
+              <span
+                className="block h-full rounded-full bg-amber transition-[width] duration-300"
+                style={{
+                  width: `${Math.min(100, (budget.spent_cents / Math.max(1, budget.limit_cents)) * 100)}%`,
+                }}
+              />
+            </span>
+            <span className="shrink-0 text-caption tabular-nums text-fg-2">${(remaining / 100).toFixed(2)} left</span>
+          </motion.div>
+        )}
+        {active.length > 0 && (
+          <motion.span
+            key="lease"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
+            transition={spring.snappy}
+            title="Polty is borrowing a device · time left on the lease"
+            className="ghost-chip pointer-events-auto inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-caption font-medium tabular-nums text-mint"
+          >
+            <Icon icon={KeyRound} size={13} className="animate-pulse" />
+            {active.length > 1 ? `${active.length} · ` : ""}
+            {Math.ceil((soonest ?? 0) / 1000)}s
+          </motion.span>
+        )}
+      </AnimatePresence>
+      <BrainToggle />
+      <Link href="/devices" className="ghost-chip pointer-events-auto inline-flex h-10 items-center rounded-full px-3 text-caption text-fg-2" aria-label="Connect devices">Devices</Link>
     </header>
   );
 }
 
-function Chip({ icon, label, title, tone, pulse, compact }: { icon: React.ReactNode; label: string; title: string; tone: "mint" | "amber" | "mute"; pulse?: boolean; compact?: boolean }) {
-  return (
-    <span
-      title={title}
-      className={clsx(
-        "ghost-chip inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3 font-mono text-[11px] font-medium",
-        tone === "mint" ? "text-mint" : tone === "amber" ? "text-amber" : "text-ivory-dim",
-      )}
-    >
-      <span className={clsx(pulse && "animate-pulse")}>{icon}</span>
-      {compact ? (
-        <>
-          <span className="sm:hidden">{label.split(" ")[0]}</span>
-          <span className="hidden sm:inline">{label}</span>
-        </>
-      ) : (
-        label
-      )}
-    </span>
-  );
-}
-
-/** Which Claude drives Polty: Haiku for snappy replies, Opus for multi-step missions. */
+/** Which Claude drives Polty: Haiku for snappy replies, Opus for multi-step tasks. */
 function BrainToggle() {
   const brain = useGhost((s) => s.brain);
-  const opts = [
-    { id: "fast", label: "Fast", icon: Zap, title: "Fast — Claude Haiku 4.5, quickest replies" },
-    { id: "deep", label: "Deep", icon: Brain, title: "Deep — Claude Opus 5.5, best for multi-step tasks" },
-  ] as const;
+  const opts: {
+    id: "fast" | "deep";
+    label: string;
+    icon: IconNode;
+    title: string;
+  }[] = [
+    {
+      id: "fast",
+      label: "Fast",
+      icon: Zap,
+      title: "Fast — Claude Haiku 4.5, quickest replies",
+    },
+    {
+      id: "deep",
+      label: "Deep",
+      icon: Brain,
+      title: "Deep — Claude Opus 5.5, best for multi-step tasks",
+    },
+  ];
   return (
-    <div role="radiogroup" aria-label="Polty's brain" className="ghost-chip relative flex h-9 items-center gap-0.5 rounded-full p-1">
+    <div role="radiogroup" aria-label="Polty's brain" className="ghost-chip pointer-events-auto relative flex h-10 items-center gap-0.5 rounded-full p-1">
       {opts.map((o) => {
         const on = brain === o.id;
         return (
@@ -108,21 +110,25 @@ function BrainToggle() {
             role="radio"
             aria-checked={on}
             title={o.title}
-            onClick={() => useGhost.getState().set({ brain: o.id })}
+            onClick={() => {
+              if (on) return;
+              haptic();
+              useGhost.getState().set({ brain: o.id });
+            }}
             className={clsx(
-              "relative z-10 inline-flex h-7 items-center gap-1 rounded-full px-2 font-mono text-[11px] font-medium transition-colors sm:px-2.5",
-              on ? "text-ink" : "text-ivory-dim hover:text-ivory",
+              "relative z-10 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-medium transition-colors duration-150",
+              on ? "text-fg-inverse" : "text-fg-2 hover:text-fg",
             )}
           >
             {on && (
               <motion.span
                 layoutId="brain-pill"
-                className={clsx("absolute inset-0 -z-10 rounded-full shadow-[0_4px_12px_-4px_rgb(15_23_42/0.45)]", o.id === "deep" ? "bg-violet" : "bg-ivory")}
-                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                className={clsx("absolute inset-0 -z-10 rounded-full shadow-pop", o.id === "deep" ? "bg-violet" : "bg-fg")}
+                transition={spring.snappy}
               />
             )}
-            <o.icon size={12} strokeWidth={2.4} aria-hidden />
-            <span className="hidden sm:inline">{o.label}</span>
+            <Icon icon={o.icon} size={13} strokeWidth={2.2} />
+            <span>{o.label}</span>
           </button>
         );
       })}

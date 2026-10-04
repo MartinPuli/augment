@@ -1,28 +1,42 @@
 @import "tailwindcss";
 
 /*
- * GHOST design tokens — light glass over nature.
+ * GHOST design system — calm, editorial, light glass over a slow nature loop.
  *
- * Token names are historical (the first UI was dark): read them by ROLE, not by name.
- *   ink / ink-2 / ink-3   = surfaces (page base, glass panels, inner wells) — light
- *   ink-4                 = a faint ink tint for tracks, hovers and chips
- *   ivory / ivory-dim     = foreground text (near-black ink, secondary gray)
- *   mute                  = tertiary text, still WCAG AA on glass
- *   mint = confirmed / active access, amber = waiting, coral = stopped / failed,
- *   violet = the agent's thought. State is always also communicated through text and shape.
- * `.ghost-screen` flips the same tokens back to the dark HUD palette for anything that is a
- * "screen" (live video, camera feeds) so its overlays stay legible on footage.
+ * Every value in the UI traces back to a token here. Reference roles, never raw hex:
+ *
+ *   Color   page · surface · surface-2 · tint        (backgrounds, back to front)
+ *           fg · fg-2 · fg-3 · fg-inverse            (text by emphasis; inverse = on dark fills)
+ *           line · line-strong                       (hairlines)
+ *           mint = live / confirmed / listening, amber = waiting, coral = stopped / failed,
+ *           violet = the agent thinking. State is always also shown with text or shape.
+ *   Type    font-display (Tiempos Headline) and font-serif (Tiempos Text): the primary voice —
+ *           headlines, Polty's words, titles. Regular weight only; never bold it. Tracking -0.04em.
+ *           font-sans (Maison Neue): body text for the rest of the UI. font-mono: codes, ids.
+ *           Sizes by role: text-display · text-title · text-heading · text-body-lg · text-body ·
+ *           text-body-sm · text-caption · text-label · text-micro
+ *   Radius  rounded-card (widgets, panels) · rounded-tile (items inside a card) · rounded-full
+ *   Shadow  shadow-card · shadow-float · shadow-pop
+ *   Motion  ease-standard (enter/exit) · ease-move (already on screen); durations and springs
+ *           live in src/components/ui/motion.ts.
+ *
+ * `.ghost-screen` flips the same roles to a dark palette for anything that is a "screen" (live
+ * video, camera feeds) so overlays stay legible on footage.
  */
 @theme {
-  --color-ink: #f1f2f7;
-  --color-ink-2: rgb(255 255 255 / 0.62);
-  --color-ink-3: rgb(255 255 255 / 0.55);
-  --color-ink-4: rgb(15 23 42 / 0.06);
-  --color-line: rgb(15 23 42 / 0.08);
-  --color-line-strong: rgb(15 23 42 / 0.15);
-  --color-ivory: #14161a;
-  --color-ivory-dim: #475569;
-  --color-mute: #5b6475;
+  /* ---------- color ---------- */
+  --color-page: #f4f3ef;
+  --color-surface: rgb(255 255 255 / 0.7);
+  --color-surface-2: rgb(255 255 255 / 0.62);
+  --color-tint: rgb(20 20 18 / 0.055);
+  --color-line: rgb(20 20 18 / 0.08);
+  --color-line-strong: rgb(20 20 18 / 0.15);
+  --color-fg: #151513;
+  --color-fg-2: #4b4c4f;
+  --color-fg-3: #66686d;
+  --color-fg-inverse: #fbfaf7;
+  --color-scrim: rgb(21 21 19 / 0.4);
+
   --color-mint: #0f766e;
   --color-mint-deep: #115e59;
   --color-mint-glow: #2dd4bf;
@@ -31,37 +45,60 @@
   --color-violet: #6d28d9;
   --color-violet-glow: #a78bfa;
 
-  --font-display: var(--font-unbounded), ui-sans-serif, system-ui;
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Deprecated pre-redesign names (kept so older widgets keep rendering). Use the roles above. */
+  --color-ink: var(--color-page);
+  --color-ink-2: var(--color-surface);
+  --color-ink-3: var(--color-surface-2);
+  --color-ink-4: var(--color-tint);
+  --color-ivory: var(--color-fg);
+  --color-ivory-dim: var(--color-fg-2);
+  --color-mute: var(--color-fg-3);
 
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-blink-caret: blink-caret 1s steps(2) infinite;
-  --animate-scan: scan 2.4s linear infinite;
-  --animate-pulse-ring: pulse-ring 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  /* ---------- type ---------- */
+  --font-display: "Tiempos Headline", "Tiempos Text", "Iowan Old Style", Georgia, ui-serif, serif;
+  --font-serif: "Tiempos Text", "Tiempos Headline", "Iowan Old Style", Georgia, ui-serif, serif;
+  --font-sans: "Maison Neue", var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-8px);
-    }
-  }
-  @keyframes blink-caret {
-    to {
-      visibility: hidden;
-    }
-  }
-  @keyframes scan {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
+  --text-display: clamp(2.25rem, 1.55rem + 2.8vw, 3.75rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.04em;
+  --text-title: clamp(1.375rem, 1.2rem + 0.7vw, 1.75rem);
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.04em;
+  --text-heading: 1.0625rem;
+  --text-heading--line-height: 1.3;
+  --text-heading--letter-spacing: -0.04em;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.47;
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.42;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.35;
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.02em;
+  --text-micro: 0.625rem;
+  --text-micro--line-height: 1.2;
+  --text-micro--letter-spacing: 0.06em;
+
+  /* ---------- shape ---------- */
+  --radius-card: 1.375rem;
+  --radius-tile: 0.875rem;
+
+  --shadow-card: 0 0 0 1px rgb(20 20 18 / 0.05), 0 1px 2px rgb(20 20 18 / 0.04), 0 18px 48px -24px rgb(20 20 18 / 0.22);
+  --shadow-float: 0 0 0 1px rgb(20 20 18 / 0.05), 0 2px 6px rgb(20 20 18 / 0.05), 0 24px 60px -24px rgb(20 20 18 / 0.3);
+  --shadow-pop: 0 1px 1px rgb(20 20 18 / 0.08), 0 6px 16px -6px rgb(20 20 18 / 0.35);
+
+  /* ---------- motion ---------- */
+  --ease-standard: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --animate-pulse-ring: pulse-ring 1.8s var(--ease-standard) infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
   @keyframes pulse-ring {
     0% {
       transform: scale(0.8);
@@ -72,96 +109,131 @@
       opacity: 0;
     }
   }
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
 }
 
 :root {
   color-scheme: light;
+  /* Height of the voice dock (measured and updated by VoiceDock); the hero and canvas stay clear of it. */
+  --dock-h: 176px;
 }
 
 html {
   /* Shown only until the nature backdrop paints (and if it can't). Keep <body> transparent:
      a body background would paint over the fixed, negative-z backdrop. */
-  background: #eceef5;
-  color: var(--color-ivory);
+  background: var(--color-page);
+  color: var(--color-fg);
+  /* Tiempos ships in Regular only: never fake a bold or an italic. */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 body {
   background: transparent;
-  color: var(--color-ivory);
-}
-
-body {
+  color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--color-mint-glow) 40%, transparent);
-  color: var(--color-ivory);
+  background: color-mix(in oklab, var(--color-mint-glow) 35%, transparent);
+  color: var(--color-fg);
 }
 
-:focus-visible {
-  outline: 2px solid color-mix(in oklab, var(--color-mint) 60%, transparent);
-  outline-offset: 2px;
+@layer base {
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--color-mint) 55%, transparent);
+    outline-offset: 2px;
+  }
 }
 
-/* Thin, quiet scrollbars inside widgets */
+/* Thin, quiet scrollbars inside widgets and panels */
 .ghost-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgb(15 23 42 / 0.18) transparent;
+  scrollbar-color: rgb(20 20 18 / 0.16) transparent;
 }
 
 @layer components {
-  /* Frosted glass (visionOS-style): widgets, dock, drawer, panels. */
+  /* Glass surface: widgets, dock, drawer, panels. Clean edge, soft depth, no heavy frost. */
   .ghost-glass {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.64), rgb(255 255 255 / 0.5));
-    border: 1px solid rgb(255 255 255 / 0.7);
+    background: var(--color-surface);
     box-shadow:
-      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
-      0 1px 2px 0 rgb(15 23 42 / 0.04),
-      0 20px 60px -20px rgb(15 23 42 / 0.25);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
+      inset 0 1px 0 0 rgb(255 255 255 / 0.85),
+      var(--shadow-card);
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
   }
 
   /* The same glass, sized for chips and pills. */
   .ghost-chip {
-    background: rgb(255 255 255 / 0.58);
-    border: 1px solid rgb(255 255 255 / 0.7);
+    background: rgb(255 255 255 / 0.66);
     box-shadow:
-      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
-      0 8px 24px -12px rgb(15 23 42 / 0.28);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
+      inset 0 1px 0 0 rgb(255 255 255 / 0.85),
+      0 0 0 1px rgb(20 20 18 / 0.05),
+      0 6px 18px -10px rgb(20 20 18 / 0.25);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
   }
 
-  /* Tiny uppercase HUD label */
+  /* The primary typeface (Tiempos) is always set tight. A size role or tracking-* still wins. */
+  .font-display,
+  .font-serif {
+    letter-spacing: -0.04em;
+  }
+
+  /* Small uppercase section label (sans, not mono: calm rather than techy). */
   .hud-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
     text-transform: uppercase;
-    color: var(--color-mute);
+    color: var(--color-fg-3);
+  }
+
+  /* Loading placeholder shaped like the content it stands in for. */
+  .ghost-skeleton {
+    background: linear-gradient(90deg, var(--color-tint) 0%, rgb(255 255 255 / 0.7) 50%, var(--color-tint) 100%);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
   }
 }
 
-/* A "screen" inside the glass (live video, camera feeds): dark HUD palette in scope. */
+/* A "screen" inside the glass (live video, camera feeds): dark palette in scope. */
 .ghost-screen {
-  --color-ink: #0a0b0e;
-  --color-ink-2: #111318;
-  --color-ink-3: #181b22;
-  --color-ink-4: #22262f;
+  --color-page: #0a0b0e;
+  --color-surface: #111318;
+  --color-surface-2: #181b22;
+  --color-tint: #22262f;
   --color-line: rgb(244 239 228 / 0.12);
   --color-line-strong: rgb(244 239 228 / 0.22);
-  --color-ivory: #f4efe4;
-  --color-ivory-dim: #d6d1c5;
-  --color-mute: #a19d94;
+  --color-fg: #f4efe4;
+  --color-fg-2: #d6d1c5;
+  --color-fg-3: #a19d94;
+  --color-fg-inverse: #0a0b0e;
   --color-mint: #5df2b5;
   --color-amber: #ffb547;
   --color-coral: #ff6b5e;
   --color-violet: #b3a7ff;
   --color-mint-glow: #5df2b5;
-  color: var(--color-ivory);
+  /* aliases resolve at :root, so they are re-pointed here too */
+  --color-ink: var(--color-page);
+  --color-ink-2: var(--color-surface);
+  --color-ink-3: var(--color-surface-2);
+  --color-ink-4: var(--color-tint);
+  --color-ivory: var(--color-fg);
+  --color-ivory-dim: var(--color-fg-2);
+  --color-mute: var(--color-fg-3);
+  color: var(--color-fg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -200,42 +272,41 @@ body {
 }
 
 /* ---------- Nature backdrop ---------- */
-/* Pastel dawn gradient: shown while the footage loads, and instead of it if it can't. */
+/* Warm dawn gradient: shown while the footage loads, and instead of it if it can't. */
 .ghost-bg-fallback {
   background:
     radial-gradient(60% 50% at 20% 15%, rgb(255 255 255 / 0.9), transparent 70%),
-    radial-gradient(55% 45% at 82% 18%, rgb(214 222 246 / 0.95), transparent 70%),
-    radial-gradient(60% 50% at 50% 55%, rgb(243 222 232 / 0.85), transparent 70%),
-    radial-gradient(70% 55% at 75% 100%, rgb(196 212 236 / 0.9), transparent 70%),
-    radial-gradient(60% 50% at 8% 92%, rgb(208 230 232 / 0.9), transparent 70%),
-    linear-gradient(180deg, #e9ecf7 0%, #f1e9f0 50%, #dde6f2 100%);
+    radial-gradient(55% 45% at 82% 18%, rgb(222 228 240 / 0.95), transparent 70%),
+    radial-gradient(60% 50% at 50% 55%, rgb(244 230 226 / 0.85), transparent 70%),
+    radial-gradient(70% 55% at 75% 100%, rgb(214 224 232 / 0.9), transparent 70%),
+    radial-gradient(60% 50% at 8% 92%, rgb(220 234 230 / 0.9), transparent 70%),
+    linear-gradient(180deg, #eef0f2 0%, #f4efea 50%, #e6ebee 100%);
 }
 /* The footage is a live wallpaper, not a feature: heavily softened into luminous colour. */
 .ghost-bg-media {
-  filter: blur(24px) saturate(1.3) brightness(1.12) contrast(0.94);
+  filter: blur(28px) saturate(1.15) brightness(1.14) contrast(0.92);
   transform: scale(1.12);
 }
-/* Pastel light leaks so the field reads luminous, not overcast. */
+/* Faint light leaks so the field reads luminous, not overcast. */
 .ghost-bg-tint {
   background:
-    radial-gradient(55% 45% at 12% 18%, rgb(221 214 254 / 0.42), transparent 70%),
-    radial-gradient(50% 40% at 88% 14%, rgb(204 236 255 / 0.4), transparent 70%),
-    radial-gradient(60% 45% at 55% 62%, rgb(255 228 214 / 0.3), transparent 70%),
-    radial-gradient(55% 45% at 90% 92%, rgb(204 251 241 / 0.4), transparent 70%),
-    radial-gradient(50% 40% at 8% 88%, rgb(224 231 255 / 0.4), transparent 70%);
+    radial-gradient(55% 45% at 12% 18%, rgb(236 232 252 / 0.36), transparent 70%),
+    radial-gradient(50% 40% at 88% 14%, rgb(220 238 252 / 0.34), transparent 70%),
+    radial-gradient(60% 45% at 55% 62%, rgb(255 236 226 / 0.26), transparent 70%),
+    radial-gradient(55% 45% at 90% 92%, rgb(216 248 240 / 0.34), transparent 70%);
 }
-/* White wash: stronger at the top bar and the dock, airy in the middle. */
+/* Warm white wash: calm and even, a touch stronger behind the top bar and the dock. */
 .ghost-bg-wash {
   background: linear-gradient(
     180deg,
-    rgb(250 251 255 / 0.5) 0%,
-    rgb(250 251 255 / 0.3) 24%,
-    rgb(250 251 255 / 0.25) 55%,
-    rgb(250 251 255 / 0.38) 82%,
-    rgb(250 251 255 / 0.5) 100%
+    rgb(248 247 243 / 0.62) 0%,
+    rgb(248 247 243 / 0.42) 22%,
+    rgb(248 247 243 / 0.36) 55%,
+    rgb(248 247 243 / 0.5) 82%,
+    rgb(248 247 243 / 0.66) 100%
   );
 }
 /* Very soft vignette for depth. */
 .ghost-bg-vignette {
-  background: radial-gradient(130% 100% at 50% 40%, transparent 60%, rgb(30 41 82 / 0.1) 100%);
+  background: radial-gradient(130% 100% at 50% 40%, transparent 62%, rgb(40 36 30 / 0.08) 100%);
 }

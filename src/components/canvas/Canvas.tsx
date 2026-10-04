@@ -24,7 +24,7 @@ export function Canvas() {
 
   return (
     <LayoutGroup>
-      <div className="mx-auto grid w-full max-w-[1400px] grid-flow-dense grid-cols-12 items-start gap-4 px-4 pb-72 pt-24 sm:px-6 lg:pl-40">
+      <div className="mx-auto grid w-full max-w-[1400px] grid-flow-dense grid-cols-12 items-start gap-3 px-3 pb-[calc(var(--dock-h,232px)+40px)] pt-20 sm:gap-4 sm:px-6 lg:pl-40">
         <AnimatePresence mode="popLayout">
           {ordered.map((w) => (
             <WidgetSlot key={w.id} spec={w} />
@@ -62,7 +62,7 @@ function WidgetSlot({ spec }: { spec: WidgetSpec }) {
           <C id={spec.id} props={spec.props} focused={focused} report={report} emit={emit} update={update} />
         </ErrorBoundary>
       ) : (
-        <p className="font-mono text-xs text-coral">Unknown widget type “{spec.type}”.</p>
+        <p className="text-body-sm text-coral">Unknown widget type “{spec.type}”.</p>
       )}
     </WidgetFrame>
   );

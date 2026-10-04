@@ -46,3 +46,6 @@ next-env.d.ts
 .env
 !.env.example
 .mastra/
+
+# Licensed font sources dropped in locally (never commit: public repo)
+/tiempos-font-family/

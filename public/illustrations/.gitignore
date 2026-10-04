@@ -1,0 +1,4 @@
+# Thiings 3D icons, downloaded by `pnpm exec tsx scripts/fetch-illustrations.ts` — never commit them
+# (free for personal use only; this repository is public).
+*.png
+*.part
