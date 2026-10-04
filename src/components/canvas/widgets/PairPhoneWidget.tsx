@@ -140,10 +140,10 @@ export default function PairPhoneWidget({ report, emit }: WidgetComponentProps<R
       <AnimatePresence mode="wait">
         {(status === "creating" || status === "waiting" || status === "error") && (
           <motion.div key="qr" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} className="flex items-center gap-5">
-            <div className="relative shrink-0 rounded-[22px] bg-ink-3 p-3 ring-1 ring-line">
+            <div className="relative shrink-0 rounded-[22px] bg-white p-3 shadow-[0_10px_30px_-14px_rgb(15_23_42/0.35)] ring-1 ring-white">
               {pairing && status === "waiting" ? (
                 <motion.div key={pairing.code} initial={{ opacity: 0, filter: "blur(6px)" }} animate={{ opacity: 1, filter: "blur(0px)" }}>
-                  <QRCodeSVG value={url} size={148} bgColor="#181b22" fgColor="#f4efe4" level="M" marginSize={1} className="rounded-xl" />
+                  <QRCodeSVG value={url} size={148} bgColor="#ffffff" fgColor="#14161a" level="M" marginSize={1} className="rounded-xl" />
                 </motion.div>
               ) : (
                 <div className="grid h-[148px] w-[148px] place-items-center">
@@ -168,13 +168,13 @@ export default function PairPhoneWidget({ report, emit }: WidgetComponentProps<R
                 pairing && (
                   <div className="mt-3 flex items-center gap-3">
                     <svg width="50" height="50" viewBox="0 0 50 50" className="-rotate-90" aria-hidden>
-                      <circle cx="25" cy="25" r="21" fill="none" stroke="rgb(244 239 228 / 0.1)" strokeWidth="3" />
+                      <circle cx="25" cy="25" r="21" fill="none" stroke="rgb(15 23 42 / 0.1)" strokeWidth="3" />
                       <circle
                         cx="25"
                         cy="25"
                         r="21"
                         fill="none"
-                        stroke={frac < 0.2 ? "#ffb547" : "#5df2b5"}
+                        stroke={frac < 0.2 ? "#d97706" : "#0f766e"}
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeDasharray={RING}
@@ -225,7 +225,7 @@ export default function PairPhoneWidget({ report, emit }: WidgetComponentProps<R
                 whileTap={{ scale: 0.97 }}
                 onClick={onConfirm}
                 disabled={status === "confirming"}
-                className="flex items-center justify-center gap-2 rounded-xl bg-mint py-3 text-sm font-semibold text-ink shadow-[0_8px_30px_-10px_rgba(93,242,181,0.7)] disabled:opacity-60"
+                className="flex items-center justify-center gap-2 rounded-xl bg-mint py-3 text-sm font-semibold text-white shadow-[0_10px_28px_-10px_rgb(15_118_110/0.7)] transition hover:bg-mint-deep disabled:opacity-60"
               >
                 {status === "confirming" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm
               </motion.button>

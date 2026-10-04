@@ -519,8 +519,8 @@ export default function LiveViewWidget({ props, report, emit, update, focused }:
     <div
       ref={wrapRef}
       className={clsx(
-        "relative w-full overflow-hidden rounded-xl border bg-ink select-none",
-        focused ? "border-mint/30" : "border-line",
+        "ghost-screen relative w-full overflow-hidden rounded-2xl border bg-ink shadow-[0_0_0_1px_rgb(255_255_255/0.6),0_12px_32px_-16px_rgb(15_23_42/0.5)] select-none",
+        focused ? "border-mint/40" : "border-line",
       )}
       style={{ aspectRatio: String(aspect), maxHeight: "72vh" }}
     >

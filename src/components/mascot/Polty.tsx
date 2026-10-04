@@ -64,12 +64,13 @@ const MOUTHS: Record<Expr["mouth"], string> = {
   wavy: "M90 129 Q95 125 100 129 T110 129",
 };
 
+// Aura colours, tuned to read over light glass and footage.
 const GLOW: Record<Activity, string> = {
-  idle: "#f4efe4",
-  listening: "#5df2b5",
-  thinking: "#a99bff",
-  speaking: "#f4efe4",
-  acting: "#5df2b5",
+  idle: "#7ee8d6",
+  listening: "#2dd4bf",
+  thinking: "#a78bfa",
+  speaking: "#b8a6ff",
+  acting: "#2dd4bf",
 };
 
 const EYE_L = { cx: 76, cy: 98 };
@@ -288,7 +289,7 @@ export function Polty({ mood, activity, speechLevel, micLevel, gaze, size = 160,
               key={i}
               d="M86 6 Q100 -8 114 6"
               fill="none"
-              stroke="#5df2b5"
+              stroke="#14b8a6"
               strokeWidth={3}
               strokeLinecap="round"
               initial={{ opacity: 0, y: 0, scale: 0.6 }}
@@ -374,7 +375,7 @@ export function Polty({ mood, activity, speechLevel, micLevel, gaze, size = 160,
               <motion.circle
                 key={i}
                 r={3.2 - i * 0.6}
-                fill="#a99bff"
+                fill="#8b5cf6"
                 initial={{ cx: 168, cy: 30, opacity: 0 }}
                 animate={{ cx: [168, 182 + i * 6, 168], cy: [30, 14 - i * 8, 30], opacity: [0, 1, 0] }}
                 transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.25 }}
@@ -386,7 +387,7 @@ export function Polty({ mood, activity, speechLevel, micLevel, gaze, size = 160,
           <motion.text
             x="160"
             y="30"
-            fill="#c9c4b8"
+            fill="#5b6475"
             fontSize="18"
             fontFamily="var(--font-display)"
             animate={{ y: [30, 10], opacity: [0, 1, 0] }}
@@ -404,14 +405,14 @@ export function Polty({ mood, activity, speechLevel, micLevel, gaze, size = 160,
             <motion.path
               key={i}
               d={`M${x} ${y - 7} L${x + 2} ${y - 2} L${x + 7} ${y} L${x + 2} ${y + 2} L${x} ${y + 7} L${x - 2} ${y + 2} L${x - 7} ${y} L${x - 2} ${y - 2} Z`}
-              fill="#5df2b5"
+              fill="#14b8a6"
               animate={{ scale: [0, 1, 0], rotate: [0, 90] }}
               transition={{ duration: 1.3, repeat: Infinity, delay: i * 0.35 }}
               style={{ originX: 0.5, originY: 0.5 }}
             />
           ))}
         {mood === "surprised" && (
-          <motion.text x="150" y="26" fill="#ffb547" fontSize="26" fontWeight="800" fontFamily="var(--font-display)" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+          <motion.text x="150" y="26" fill="#d97706" fontSize="26" fontWeight="800" fontFamily="var(--font-display)" initial={{ scale: 0 }} animate={{ scale: 1 }}>
             !
           </motion.text>
         )}
@@ -424,8 +425,8 @@ export function Polty({ mood, activity, speechLevel, micLevel, gaze, size = 160,
 export function PoltyGlyph({ size = 28, className }: { size?: number; className?: string }) {
   return (
     <svg viewBox="0 0 200 220" width={size} height={(size * 220) / 200} className={className} aria-hidden>
-      <path d={bodyPath(0.4, 0, 0.5)} fill="#f4efe4" />
-      <path d="M100 24 C97 10 108 1 116 6 C123 11 118 21 110 19" fill="none" stroke="#f4efe4" strokeWidth="8" strokeLinecap="round" />
+      <path d={bodyPath(0.4, 0, 0.5)} fill="#fbf8f1" stroke="rgb(20 22 26 / 0.22)" strokeWidth="5" strokeLinejoin="round" paintOrder="stroke" />
+      <path d="M100 24 C97 10 108 1 116 6 C123 11 118 21 110 19" fill="none" stroke="#fbf8f1" strokeWidth="8" strokeLinecap="round" />
       <ellipse cx="76" cy="98" rx="13" ry="18" fill="#0a0b0e" />
       <ellipse cx="124" cy="98" rx="13" ry="18" fill="#0a0b0e" />
       <circle cx="81" cy="91" r="4.5" fill="#fff" />

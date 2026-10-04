@@ -166,7 +166,7 @@ export default function ConnectHardwareWidget({ props, report, emit }: WidgetCom
                 laptopOn
                   ? "border-mint/35 bg-mint/[0.06]"
                   : sup.supported
-                    ? "border-line-strong bg-gradient-to-b from-ink-3 to-ink-2 shadow-[0_1px_0_rgba(244,239,228,0.06)_inset,0_10px_24px_-14px_rgba(0,0,0,0.9)] hover:border-mint/40"
+                    ? "border-white/80 bg-gradient-to-b from-white/85 to-white/55 shadow-[inset_0_1px_0_rgb(255_255_255),0_10px_24px_-14px_rgb(15_23_42/0.35)] hover:border-mint/40"
                     : "cursor-not-allowed border-line bg-ink-2/60",
               )}
             >

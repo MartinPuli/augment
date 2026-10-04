@@ -1,0 +1,4 @@
+# Background media is downloaded by `pnpm exec tsx scripts/fetch-background.ts` — never commit it.
+*.mp4
+*.webm
+*.jpg

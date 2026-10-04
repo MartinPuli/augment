@@ -142,8 +142,8 @@ function hash(s: string): number {
 }
 
 const TIER = {
-  ready: { text: "text-mint", bg: "bg-mint", ring: "border-mint/50", label: "Ready", glow: "shadow-[0_0_14px_rgb(93_242_181/0.55)]" },
-  pair: { text: "text-amber", bg: "bg-amber", ring: "border-amber/50", label: "Needs pairing", glow: "shadow-[0_0_12px_rgb(255_181_71/0.45)]" },
+  ready: { text: "text-mint", bg: "bg-mint", ring: "border-mint/50", label: "Ready", glow: "shadow-[0_0_12px_rgb(45_212_191/0.6)]" },
+  pair: { text: "text-amber", bg: "bg-amber", ring: "border-amber/50", label: "Needs pairing", glow: "shadow-[0_0_12px_rgb(245_158_11/0.45)]" },
   seen: { text: "text-mute", bg: "bg-mute", ring: "border-line-strong", label: "Unsupported", glow: "" },
 } as const;
 
@@ -327,17 +327,17 @@ export default function NetworkScanWidget({ props, report, emit, focused }: Widg
         <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full" aria-hidden>
           <defs>
             <radialGradient id="ghost-radar-bg" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgb(93 242 181 / 0.10)" />
-              <stop offset="70%" stopColor="rgb(93 242 181 / 0.03)" />
-              <stop offset="100%" stopColor="rgb(0 0 0 / 0)" />
+              <stop offset="0%" stopColor="rgb(45 212 191 / 0.16)" />
+              <stop offset="70%" stopColor="rgb(45 212 191 / 0.05)" />
+              <stop offset="100%" stopColor="rgb(255 255 255 / 0)" />
             </radialGradient>
           </defs>
-          <circle cx="100" cy="100" r="97" fill="url(#ghost-radar-bg)" stroke="rgb(244 239 228 / 0.14)" strokeWidth="0.8" />
+          <circle cx="100" cy="100" r="97" fill="url(#ghost-radar-bg)" stroke="rgb(15 23 42 / 0.14)" strokeWidth="0.8" />
           {[24, 48, 72].map((r) => (
-            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="rgb(244 239 228 / 0.08)" strokeWidth="0.6" strokeDasharray={r === 72 ? "1.5 3" : undefined} />
+            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="rgb(15 23 42 / 0.09)" strokeWidth="0.6" strokeDasharray={r === 72 ? "1.5 3" : undefined} />
           ))}
-          <line x1="3" y1="100" x2="197" y2="100" stroke="rgb(244 239 228 / 0.06)" strokeWidth="0.6" />
-          <line x1="100" y1="3" x2="100" y2="197" stroke="rgb(244 239 228 / 0.06)" strokeWidth="0.6" />
+          <line x1="3" y1="100" x2="197" y2="100" stroke="rgb(15 23 42 / 0.07)" strokeWidth="0.6" />
+          <line x1="100" y1="3" x2="100" y2="197" stroke="rgb(15 23 42 / 0.07)" strokeWidth="0.6" />
           {Array.from({ length: 72 }, (_, i) => {
             const a = (i * 5 * Math.PI) / 180;
             const long = i % 6 === 0;
@@ -349,7 +349,7 @@ export default function NetworkScanWidget({ props, report, emit, focused }: Widg
                 y1={100 + Math.sin(a) * r1}
                 x2={100 + Math.cos(a) * 97}
                 y2={100 + Math.sin(a) * 97}
-                stroke={long ? "rgb(244 239 228 / 0.22)" : "rgb(244 239 228 / 0.09)"}
+                stroke={long ? "rgb(15 23 42 / 0.25)" : "rgb(15 23 42 / 0.1)"}
                 strokeWidth="0.6"
               />
             );
@@ -361,7 +361,7 @@ export default function NetworkScanWidget({ props, report, emit, focused }: Widg
           aria-hidden
           className="pointer-events-none absolute inset-[1.5%] rounded-full"
           style={{
-            background: "conic-gradient(from 0deg, rgb(93 242 181 / 0) 0deg, rgb(93 242 181 / 0) 290deg, rgb(93 242 181 / 0.07) 320deg, rgb(93 242 181 / 0.32) 359deg, rgb(93 242 181 / 0) 360deg)",
+            background: "conic-gradient(from 0deg, rgb(45 212 191 / 0) 0deg, rgb(45 212 191 / 0) 290deg, rgb(45 212 191 / 0.1) 320deg, rgb(20 184 166 / 0.38) 359deg, rgb(45 212 191 / 0) 360deg)",
             opacity: scanning ? 1 : 0.55,
           }}
           animate={{ rotate: 360 }}

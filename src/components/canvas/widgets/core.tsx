@@ -131,7 +131,7 @@ export function ImageWidget({ props }: WidgetComponentProps<{ observation?: Obse
             initial={{ y: "-100%" }}
             animate={{ y: "120%" }}
             transition={{ duration: 1.1, ease: "easeInOut" }}
-            className="pointer-events-none absolute inset-x-0 h-16 bg-gradient-to-b from-transparent via-mint/25 to-transparent"
+            className="pointer-events-none absolute inset-x-0 h-16 bg-gradient-to-b from-transparent via-mint-glow/30 to-transparent"
           />
         )}
         <div className="absolute left-2.5 top-2.5 flex gap-1.5">
@@ -197,7 +197,7 @@ export function MetricWidget({
       </div>
       {path && (
         <svg viewBox="0 0 100 30" className="h-8 w-full" preserveAspectRatio="none" aria-hidden>
-          <path d={path} fill="none" stroke="#5df2b5" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          <path d={path} fill="none" stroke="#0f766e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
       )}
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-mute">
@@ -320,13 +320,13 @@ export function LeaseWidget({ props, report }: WidgetComponentProps<{ offer?: Of
       <div className="flex items-center gap-4">
         <div className="relative h-16 w-16 shrink-0">
           <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
-            <circle cx="32" cy="32" r="27" fill="none" stroke="rgb(244 239 228 / 0.08)" strokeWidth="5" />
+            <circle cx="32" cy="32" r="27" fill="none" stroke="rgb(15 23 42 / 0.08)" strokeWidth="5" />
             <motion.circle
               cx="32"
               cy="32"
               r="27"
               fill="none"
-              stroke={tone === "mint" ? "#5df2b5" : tone === "amber" ? "#ffb547" : tone === "coral" ? "#ff6b5e" : "#8a877f"}
+              stroke={tone === "mint" ? "#0f766e" : tone === "amber" ? "#d97706" : tone === "coral" ? "#c8282d" : "#5b6475"}
               strokeWidth="5"
               strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 27}

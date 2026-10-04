@@ -1,25 +1,35 @@
 @import "tailwindcss";
 
 /*
- * GHOST design tokens.
- * Charcoal world, ivory ghost, mint = confirmed access, amber = waiting, coral = stopped/failed,
- * violet = the agent's thought. State is always also communicated through text and shape.
+ * GHOST design tokens — light glass over nature.
+ *
+ * Token names are historical (the first UI was dark): read them by ROLE, not by name.
+ *   ink / ink-2 / ink-3   = surfaces (page base, glass panels, inner wells) — light
+ *   ink-4                 = a faint ink tint for tracks, hovers and chips
+ *   ivory / ivory-dim     = foreground text (near-black ink, secondary gray)
+ *   mute                  = tertiary text, still WCAG AA on glass
+ *   mint = confirmed / active access, amber = waiting, coral = stopped / failed,
+ *   violet = the agent's thought. State is always also communicated through text and shape.
+ * `.ghost-screen` flips the same tokens back to the dark HUD palette for anything that is a
+ * "screen" (live video, camera feeds) so its overlays stay legible on footage.
  */
 @theme {
-  --color-ink: #0a0b0e;
-  --color-ink-2: #111318;
-  --color-ink-3: #181b22;
-  --color-ink-4: #22262f;
-  --color-line: rgb(244 239 228 / 0.09);
-  --color-line-strong: rgb(244 239 228 / 0.18);
-  --color-ivory: #f4efe4;
-  --color-ivory-dim: #c9c4b8;
-  --color-mute: #8a877f;
-  --color-mint: #5df2b5;
-  --color-mint-deep: #1f8f68;
-  --color-amber: #ffb547;
-  --color-coral: #ff6b5e;
-  --color-violet: #a99bff;
+  --color-ink: #f1f2f7;
+  --color-ink-2: rgb(255 255 255 / 0.62);
+  --color-ink-3: rgb(255 255 255 / 0.55);
+  --color-ink-4: rgb(15 23 42 / 0.06);
+  --color-line: rgb(15 23 42 / 0.08);
+  --color-line-strong: rgb(15 23 42 / 0.15);
+  --color-ivory: #14161a;
+  --color-ivory-dim: #475569;
+  --color-mute: #5b6475;
+  --color-mint: #0f766e;
+  --color-mint-deep: #115e59;
+  --color-mint-glow: #2dd4bf;
+  --color-amber: #b45309;
+  --color-coral: #c8282d;
+  --color-violet: #6d28d9;
+  --color-violet-glow: #a78bfa;
 
   --font-display: var(--font-unbounded), ui-sans-serif, system-ui;
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
@@ -65,12 +75,17 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-html,
+html {
+  /* Shown only until the nature backdrop paints (and if it can't). Keep <body> transparent:
+     a body background would paint over the fixed, negative-z backdrop. */
+  background: #eceef5;
+  color: var(--color-ivory);
+}
 body {
-  background: var(--color-ink);
+  background: transparent;
   color: var(--color-ivory);
 }
 
@@ -81,34 +96,72 @@ body {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--color-mint) 35%, transparent);
+  background: color-mix(in oklab, var(--color-mint-glow) 40%, transparent);
   color: var(--color-ivory);
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-mint) 60%, transparent);
+  outline-offset: 2px;
 }
 
 /* Thin, quiet scrollbars inside widgets */
 .ghost-scroll {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-ink-4) transparent;
+  scrollbar-color: rgb(15 23 42 / 0.18) transparent;
 }
 
-/* Glass card used by widget frames and panels */
-.ghost-glass {
-  background: linear-gradient(180deg, rgb(24 27 34 / 0.86), rgb(17 19 24 / 0.9));
-  border: 1px solid var(--color-line);
-  box-shadow:
-    0 1px 0 0 rgb(244 239 228 / 0.05) inset,
-    0 24px 60px -24px rgb(0 0 0 / 0.7);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+@layer components {
+  /* Frosted glass (visionOS-style): widgets, dock, drawer, panels. */
+  .ghost-glass {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.64), rgb(255 255 255 / 0.5));
+    border: 1px solid rgb(255 255 255 / 0.7);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+      0 1px 2px 0 rgb(15 23 42 / 0.04),
+      0 20px 60px -20px rgb(15 23 42 / 0.25);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+  }
+
+  /* The same glass, sized for chips and pills. */
+  .ghost-chip {
+    background: rgb(255 255 255 / 0.58);
+    border: 1px solid rgb(255 255 255 / 0.7);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+      0 8px 24px -12px rgb(15 23 42 / 0.28);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+  }
+
+  /* Tiny uppercase HUD label */
+  .hud-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-mute);
+  }
 }
 
-/* Tiny uppercase HUD label */
-.hud-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-mute);
+/* A "screen" inside the glass (live video, camera feeds): dark HUD palette in scope. */
+.ghost-screen {
+  --color-ink: #0a0b0e;
+  --color-ink-2: #111318;
+  --color-ink-3: #181b22;
+  --color-ink-4: #22262f;
+  --color-line: rgb(244 239 228 / 0.12);
+  --color-line-strong: rgb(244 239 228 / 0.22);
+  --color-ivory: #f4efe4;
+  --color-ivory-dim: #d6d1c5;
+  --color-mute: #a19d94;
+  --color-mint: #5df2b5;
+  --color-amber: #ffb547;
+  --color-coral: #ff6b5e;
+  --color-violet: #b3a7ff;
+  --color-mint-glow: #5df2b5;
+  color: var(--color-ivory);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -121,7 +174,7 @@ body {
   }
 }
 
-/* Possession sweep: a mint arc that orbits the widget border */
+/* Possession sweep: an ectoplasm arc that orbits the widget border */
 @property --sweep {
   syntax: "<angle>";
   initial-value: 0deg;
@@ -133,7 +186,7 @@ body {
   }
 }
 .ghost-ring {
-  padding: 1.5px;
+  padding: 2px;
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -141,24 +194,48 @@ body {
   mask-composite: exclude;
 }
 
-/* Living background: drifting dot grid + vignette */
+/* The page shell is transparent: the nature backdrop (NatureBackground) lives behind it. */
 .ghost-world {
-  background-color: var(--color-ink);
-  background-image:
-    radial-gradient(circle at 1px 1px, rgb(244 239 228 / 0.07) 1px, transparent 0),
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgb(169 155 255 / 0.07), transparent 70%),
-    radial-gradient(ellipse 60% 50% at 80% 100%, rgb(93 242 181 / 0.05), transparent 70%);
-  background-size:
-    28px 28px,
-    100% 100%,
-    100% 100%;
-  animation: ghost-drift 60s linear infinite;
+  background: transparent;
 }
-@keyframes ghost-drift {
-  to {
-    background-position:
-      280px 280px,
-      0 0,
-      0 0;
-  }
+
+/* ---------- Nature backdrop ---------- */
+/* Pastel dawn gradient: shown while the footage loads, and instead of it if it can't. */
+.ghost-bg-fallback {
+  background:
+    radial-gradient(60% 50% at 20% 15%, rgb(255 255 255 / 0.9), transparent 70%),
+    radial-gradient(55% 45% at 82% 18%, rgb(214 222 246 / 0.95), transparent 70%),
+    radial-gradient(60% 50% at 50% 55%, rgb(243 222 232 / 0.85), transparent 70%),
+    radial-gradient(70% 55% at 75% 100%, rgb(196 212 236 / 0.9), transparent 70%),
+    radial-gradient(60% 50% at 8% 92%, rgb(208 230 232 / 0.9), transparent 70%),
+    linear-gradient(180deg, #e9ecf7 0%, #f1e9f0 50%, #dde6f2 100%);
+}
+/* The footage is a live wallpaper, not a feature: heavily softened into luminous colour. */
+.ghost-bg-media {
+  filter: blur(24px) saturate(1.3) brightness(1.12) contrast(0.94);
+  transform: scale(1.12);
+}
+/* Pastel light leaks so the field reads luminous, not overcast. */
+.ghost-bg-tint {
+  background:
+    radial-gradient(55% 45% at 12% 18%, rgb(221 214 254 / 0.42), transparent 70%),
+    radial-gradient(50% 40% at 88% 14%, rgb(204 236 255 / 0.4), transparent 70%),
+    radial-gradient(60% 45% at 55% 62%, rgb(255 228 214 / 0.3), transparent 70%),
+    radial-gradient(55% 45% at 90% 92%, rgb(204 251 241 / 0.4), transparent 70%),
+    radial-gradient(50% 40% at 8% 88%, rgb(224 231 255 / 0.4), transparent 70%);
+}
+/* White wash: stronger at the top bar and the dock, airy in the middle. */
+.ghost-bg-wash {
+  background: linear-gradient(
+    180deg,
+    rgb(250 251 255 / 0.5) 0%,
+    rgb(250 251 255 / 0.3) 24%,
+    rgb(250 251 255 / 0.25) 55%,
+    rgb(250 251 255 / 0.38) 82%,
+    rgb(250 251 255 / 0.5) 100%
+  );
+}
+/* Very soft vignette for depth. */
+.ghost-bg-vignette {
+  background: radial-gradient(130% 100% at 50% 40%, transparent 60%, rgb(30 41 82 / 0.1) 100%);
 }

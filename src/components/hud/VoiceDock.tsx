@@ -131,14 +131,14 @@ export function VoiceDock() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             onClick={() => useGhost.getState().set({ error: null })}
-            className="pointer-events-auto max-w-[680px] rounded-full border border-coral/40 bg-ink-2/95 px-4 py-1.5 text-[12px] text-coral backdrop-blur"
+            className="ghost-chip pointer-events-auto max-w-[680px] rounded-full !border-coral/30 px-4 py-1.5 text-[12px] font-medium text-coral"
           >
             {error}
           </motion.button>
         )}
       </AnimatePresence>
 
-      <motion.div layout className="ghost-glass pointer-events-auto flex w-full max-w-[760px] items-center gap-3 rounded-[30px] p-2 pr-3">
+      <motion.div layout className="ghost-glass pointer-events-auto flex w-full max-w-[760px] items-center gap-3 rounded-[32px] p-2 pr-3">
         {/* mic */}
         <button
           onClick={toggleMic}
@@ -149,14 +149,14 @@ export function VoiceDock() {
             ref={ringRef}
             className={clsx(
               "absolute inset-0 rounded-full transition-colors duration-300",
-              listening ? "bg-mint/25" : activity === "speaking" ? "bg-ivory/15" : activity === "thinking" || activity === "acting" ? "bg-violet/20" : "bg-ink-4",
+              listening ? "bg-mint/20" : activity === "speaking" ? "bg-ivory/10" : activity === "thinking" || activity === "acting" ? "bg-violet/15" : "bg-white/70 shadow-[inset_0_1px_0_rgb(255_255_255)]",
             )}
           />
-          {listening && <span className="absolute inset-0 animate-pulse-ring rounded-full border border-mint/60" />}
+          {listening && <span className="absolute inset-0 animate-pulse-ring rounded-full border border-mint/50" />}
           <span
             className={clsx(
-              "relative grid h-11 w-11 place-items-center rounded-full transition-colors duration-300",
-              listening ? "bg-mint text-ink" : "bg-ivory text-ink",
+              "relative grid h-11 w-11 place-items-center rounded-full shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_6px_16px_-6px_rgb(15_23_42/0.55)] transition-colors duration-300",
+              listening ? "bg-mint text-white" : "bg-gradient-to-b from-[#2a2f36] to-[#121418] text-white",
             )}
           >
             {listening ? <Waves size={19} /> : <Mic size={19} />}
@@ -181,7 +181,7 @@ export function VoiceDock() {
                 placeholder="Ask Polty to find, see, touch or switch something…"
                 className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ivory outline-none placeholder:text-mute"
               />
-              <button type="submit" className="grid h-9 w-9 place-items-center rounded-full bg-ivory text-ink disabled:opacity-30" disabled={!draft.trim()} aria-label="Send">
+              <button type="submit" className="grid h-9 w-9 place-items-center rounded-full bg-ivory text-white shadow-[0_4px_12px_-4px_rgb(15_23_42/0.5)] transition hover:bg-ivory/85 disabled:opacity-30 disabled:shadow-none" disabled={!draft.trim()} aria-label="Send">
                 <ArrowUp size={16} />
               </button>
             </form>
@@ -197,7 +197,7 @@ export function VoiceDock() {
                     </>
                   )}
                 </span>
-                {voiceProvider === "browser" && <span className="hidden text-mute/70 sm:inline">· browser voice</span>}
+                {voiceProvider === "browser" && <span className="hidden text-mute sm:inline">· browser voice</span>}
               </div>
               <AnimatePresence mode="wait">
                 <motion.p
@@ -248,7 +248,7 @@ function IconBtn({ children, label, onClick, active }: { children: React.ReactNo
       aria-pressed={active}
       className={clsx(
         "grid h-9 w-9 place-items-center rounded-full transition",
-        active ? "bg-mint/15 text-mint" : "text-ivory-dim hover:bg-ink-4 hover:text-ivory",
+        active ? "bg-mint/12 text-mint ring-1 ring-mint/25" : "text-ivory-dim hover:bg-white/70 hover:text-ivory hover:shadow-[inset_0_1px_0_rgb(255_255_255)]",
       )}
     >
       {children}

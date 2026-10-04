@@ -34,22 +34,22 @@ export function ConversationDrawer() {
           animate={{ x: 0 }}
           exit={{ x: "105%" }}
           transition={{ type: "spring", stiffness: 260, damping: 30 }}
-          className="ghost-glass fixed bottom-3 right-3 top-3 z-40 flex w-[min(440px,calc(100vw-24px))] flex-col overflow-hidden rounded-[26px]"
+          className="ghost-glass fixed bottom-3 right-3 top-3 z-40 flex w-[min(440px,calc(100vw-24px))] flex-col overflow-hidden rounded-[28px]"
         >
-          <header className="flex items-center gap-2 border-b border-line px-4 py-3">
+          <header className="flex items-center gap-1 border-b border-line px-3 py-3">
             {(["conversation", "trace"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={clsx(
-                  "rounded-full px-3 py-1 font-mono text-[10.5px] uppercase tracking-[0.14em] transition",
-                  tab === t ? "bg-ivory text-ink" : "text-mute hover:text-ivory",
+                  "rounded-full px-3 py-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] transition",
+                  tab === t ? "bg-ivory text-white shadow-[0_4px_12px_-4px_rgb(15_23_42/0.45)]" : "text-ivory-dim hover:bg-white/70 hover:text-ivory",
                 )}
               >
                 {t}
               </button>
             ))}
-            <button onClick={() => useGhost.getState().set({ drawer: false })} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-mute hover:bg-ink-4 hover:text-ivory" aria-label="Close panel">
+            <button onClick={() => useGhost.getState().set({ drawer: false })} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-ivory-dim transition hover:bg-white/70 hover:text-ivory" aria-label="Close panel">
               <X size={15} />
             </button>
           </header>
@@ -100,19 +100,21 @@ function Thread() {
       <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col">
         <ThreadPrimitive.Viewport className="ghost-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
           <ThreadPrimitive.Empty>
-            <div className="m-auto flex flex-col items-center gap-3 py-16 text-center text-mute">
-              <PoltyGlyph size={40} />
+            <div className="m-auto flex flex-col items-center gap-3 py-16 text-center text-ivory-dim">
+              <span className="grid h-14 w-14 place-items-center rounded-[18px] bg-gradient-to-b from-[#2a2f36] to-[#121418] shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_10px_24px_-10px_rgb(15_23_42/0.5)]">
+                <PoltyGlyph size={30} />
+              </span>
               <p className="max-w-[240px] text-[13px]">Everything Polty hears, says and touches shows up here.</p>
             </div>
           </ThreadPrimitive.Empty>
           <ThreadPrimitive.Messages components={{ UserMessage, AssistantMessage }} />
         </ThreadPrimitive.Viewport>
-        <ComposerPrimitive.Root className="m-3 flex items-end gap-2 rounded-2xl border border-line bg-ink-3/80 p-2">
+        <ComposerPrimitive.Root className="m-3 flex items-end gap-2 rounded-[20px] border border-white/80 bg-white/70 p-2 shadow-[inset_0_1px_0_rgb(255_255_255),0_8px_24px_-14px_rgb(15_23_42/0.3)] focus-within:ring-2 focus-within:ring-mint/25">
           <ComposerPrimitive.Input
             placeholder="Type to Polty…"
             className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-[13.5px] text-ivory outline-none placeholder:text-mute"
           />
-          <ComposerPrimitive.Send className="grid h-9 w-9 place-items-center rounded-xl bg-ivory text-ink transition hover:bg-white disabled:opacity-30">
+          <ComposerPrimitive.Send className="grid h-9 w-9 place-items-center rounded-full bg-ivory text-white shadow-[0_4px_12px_-4px_rgb(15_23_42/0.5)] transition hover:bg-ivory/85 disabled:opacity-30 disabled:shadow-none">
             <ArrowUp size={16} />
           </ComposerPrimitive.Send>
         </ComposerPrimitive.Root>
@@ -123,7 +125,7 @@ function Thread() {
 
 function UserMessage() {
   return (
-    <MessagePrimitive.Root className="ml-10 self-end rounded-2xl rounded-br-md bg-ink-4 px-3.5 py-2 text-[13.5px] text-ivory">
+    <MessagePrimitive.Root className="ml-10 self-end rounded-[18px] rounded-br-md bg-gradient-to-b from-[#2a2f36] to-[#16191e] px-3.5 py-2 text-[13.5px] text-white shadow-[0_8px_20px_-10px_rgb(15_23_42/0.5)]">
       <MessagePrimitive.Parts />
     </MessagePrimitive.Root>
   );
@@ -132,10 +134,10 @@ function UserMessage() {
 function AssistantMessage() {
   return (
     <MessagePrimitive.Root className="mr-6 flex gap-2.5">
-      <div className="mt-0.5 shrink-0">
-        <PoltyGlyph size={22} />
+      <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-b from-[#2a2f36] to-[#121418] shadow-[inset_0_1px_0_rgb(255_255_255/0.18)]">
+        <PoltyGlyph size={16} />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-[13.5px] leading-relaxed text-ivory-dim">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-[13.5px] leading-relaxed text-ivory">
         <MessagePrimitive.Parts components={{ tools: { by_name: { invoke_capability: EvidenceCard, observe_web_page: EvidenceCard, accept_quote: DealCard, quote_lease: DealCard }, Fallback: ToolCard } }} />
       </div>
     </MessagePrimitive.Root>
@@ -146,7 +148,7 @@ const ToolCard: ToolCallMessagePartComponent = ({ toolName, args, result, isErro
   const [open, setOpen] = useState(false);
   const running = status?.type === "running" || result === undefined;
   return (
-    <div className="rounded-xl border border-line bg-ink-3/60">
+    <div className="rounded-xl border border-white/70 bg-white/55 shadow-[inset_0_1px_0_rgb(255_255_255)]">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left">
         {running ? (
           <Loader2 size={13} className="animate-spin text-violet" />
@@ -189,7 +191,7 @@ const EvidenceCard: ToolCallMessagePartComponent = (props) => {
     <div className="flex flex-col gap-1.5">
       <ToolCard {...props} />
       {(obsId || state) && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-line bg-ink-3/60 p-2">
+        <div className="flex items-center gap-2.5 rounded-xl border border-white/70 bg-white/55 p-2 shadow-[inset_0_1px_0_rgb(255_255_255)]">
           {obsId && (!obs?.kind || obs.kind === "image") && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/api/v1/observations/${obsId}/media`} alt="Observation" className="h-14 w-20 rounded-lg object-cover" />
@@ -238,9 +240,9 @@ function Trace() {
   return (
     <ol className="ghost-scroll flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-4">
       {[...trace].reverse().map((e, i) => (
-        <li key={`${e.at}-${i}`} className="rounded-xl border border-line bg-ink-3/50 px-3 py-2">
+        <li key={`${e.at}-${i}`} className="rounded-xl border border-white/70 bg-white/50 px-3 py-2 shadow-[inset_0_1px_0_rgb(255_255_255)]">
           <div className="flex items-center gap-2">
-            <span className={clsx("font-mono text-[10px] uppercase tracking-[0.14em]", color[e.kind])}>{e.kind}</span>
+            <span className={clsx("font-mono text-[10px] font-semibold uppercase tracking-[0.14em]", color[e.kind])}>{e.kind}</span>
             <span className="ml-auto font-mono text-[10px] text-mute">{new Date(e.at).toLocaleTimeString()}</span>
           </div>
           <div className="mt-0.5 text-[12.5px] text-ivory">{e.title}</div>

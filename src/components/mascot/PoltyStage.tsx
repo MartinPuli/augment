@@ -144,19 +144,20 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
       <svg className="absolute inset-0 h-full w-full overflow-visible">
         <defs>
           <linearGradient id="tether-grad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#f4efe4" />
-            <stop offset="100%" stopColor="#5df2b5" />
+            <stop offset="0%" stopColor="#a78bfa" />
+            <stop offset="55%" stopColor="#2dd4bf" />
+            <stop offset="100%" stopColor="#0f766e" />
           </linearGradient>
           <filter id="tether-blur">
             <feGaussianBlur stdDeviation="6" />
           </filter>
         </defs>
-        <path ref={tetherGlowRef} fill="none" stroke="#5df2b5" strokeWidth={14} strokeLinecap="round" filter="url(#tether-blur)" style={{ opacity: 0, transition: "opacity 300ms" }} />
+        <path ref={tetherGlowRef} fill="none" stroke="#5eead4" strokeWidth={14} strokeLinecap="round" filter="url(#tether-blur)" style={{ opacity: 0, transition: "opacity 300ms" }} />
         <path
           ref={tetherRef}
           fill="none"
           stroke="url(#tether-grad)"
-          strokeWidth={3}
+          strokeWidth={3.5}
           strokeLinecap="round"
           strokeDasharray="2 10"
           style={{ opacity: 0, transition: "opacity 300ms", animation: "tether-flow 0.6s linear infinite" }}
@@ -177,7 +178,7 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
             gaze={gaze}
             sway={sway}
             size={size}
-            className="h-auto w-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.45)]"
+            className="h-auto w-full [filter:drop-shadow(0_0_0.75px_rgb(15_23_42/0.4))_drop-shadow(0_4px_8px_rgb(15_23_42/0.14))_drop-shadow(0_20px_30px_rgb(30_41_82/0.2))]"
             onClick={onPoke}
           />
           <AnimatePresence>
@@ -187,7 +188,7 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
                 initial={{ opacity: 0, y: 6, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full border border-line-strong bg-ink-2/90 px-3 py-1 font-mono text-[11px] text-ivory shadow-lg backdrop-blur"
+                className="ghost-chip absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 font-mono text-[11px] font-medium text-ivory"
               >
                 <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${possessing ? "bg-mint animate-pulse" : "bg-violet"}`} />
                 {possessing ? `possessing · ${possess?.label}` : toolStatus}
