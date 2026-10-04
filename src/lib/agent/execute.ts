@@ -7,6 +7,7 @@ import type {
   Experience,
   InvokeResponse,
   Lease,
+  LiveSource,
   Observation,
   QuoteResponse,
 } from "@/lib/ghost/contracts";
@@ -245,20 +246,22 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
         };
         S().addTrace({ kind: "tool", title: `${label} · ${ref.capability_id} → ${inv.state}`, detail: inv.error ?? obs?.note });
 
-        if (obs?.kind === "stream" && obs.stream && show) {
+        // Live sources arrive as observation.stream (public HLS) or output data.live (phone WebRTC).
+        const live = (obs?.stream ?? (obs?.data?.live as LiveSource | undefined)) || null;
+        if (live && show) {
           const widgetId = `live-${ref.device_id}`;
           S().upsertWidget({
             id: widgetId,
             type: "live_view",
-            title: obs.stream.title ?? label,
+            title: live.title ?? label,
             size: "xl",
-            props: { source: obs.stream, track: { enabled: true, classes: trackDefaults(device), follow: true, max_zoom: 3 } },
+            props: { source: live, track: { enabled: true, classes: trackDefaults(device), follow: true, max_zoom: 3 } },
           });
           possess(widgetId, label);
           summary.widget_id = widgetId;
           summary.hint = "Live view is on the canvas with YOLO tracking. Use canvas_read on the widget for counts/target, canvas_update to change classes or lock a track id.";
         }
-        if ((obs?.kind === "value" || obs?.kind === "state") && show) {
+        if ((obs?.kind === "value" || obs?.kind === "state") && !live && show) {
           const widgetId = `metric-${ref.device_id}-${ref.capability_id}`;
           S().upsertWidget({
             id: widgetId,

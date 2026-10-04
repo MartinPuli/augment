@@ -136,7 +136,7 @@ function AssistantMessage() {
         <PoltyGlyph size={22} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-[13.5px] leading-relaxed text-ivory-dim">
-        <MessagePrimitive.Parts components={{ tools: { Fallback: ToolCard } }} />
+        <MessagePrimitive.Parts components={{ tools: { by_name: { invoke_capability: EvidenceCard, observe_web_page: EvidenceCard, accept_quote: DealCard, quote_lease: DealCard }, Fallback: ToolCard } }} />
       </div>
     </MessagePrimitive.Root>
   );
@@ -163,6 +163,70 @@ const ToolCard: ToolCallMessagePartComponent = ({ toolName, args, result, isErro
           {JSON.stringify(args, null, 1)}
           {result !== undefined ? `\n→ ${typeof result === "string" ? result.slice(0, 1500) : JSON.stringify(result).slice(0, 1500)}` : ""}
         </pre>
+      )}
+    </div>
+  );
+};
+
+function parseResult(result: unknown): Record<string, unknown> | null {
+  if (typeof result !== "string") return null;
+  const first = result.trim().startsWith("{") ? result.slice(0, result.lastIndexOf("}") + 1) : null;
+  if (!first) return null;
+  try {
+    return JSON.parse(first);
+  } catch {
+    return null;
+  }
+}
+
+/** invoke_capability / observe_web_page: show the evidence itself in the thread. */
+const EvidenceCard: ToolCallMessagePartComponent = (props) => {
+  const r = parseResult(props.result);
+  const obs = (r?.observation ?? null) as { observation_id?: string; kind?: string; value?: unknown; unit?: string; captured_at?: string | null } | null;
+  const obsId = obs?.observation_id ?? (r?.observation_id as string | undefined);
+  const state = r?.state as string | undefined;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <ToolCard {...props} />
+      {(obsId || state) && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-line bg-ink-3/60 p-2">
+          {obsId && (!obs?.kind || obs.kind === "image") && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/v1/observations/${obsId}/media`} alt="Observation" className="h-14 w-20 rounded-lg object-cover" />
+          )}
+          <div className="min-w-0 font-mono text-[10.5px] leading-snug">
+            {state && (
+              <div className={clsx(state === "succeeded" ? "text-mint" : state === "unknown" ? "text-amber" : "text-coral")}>{state}</div>
+            )}
+            {obs?.value !== undefined && obs?.value !== null && (
+              <div className="text-ivory">
+                {String(obs.value)} {obs.unit ?? ""}
+              </div>
+            )}
+            <div className="text-mute">{obs?.captured_at ? `captured ${new Date(obs.captured_at).toLocaleTimeString()}` : obsId ? "capture time unknown" : ""}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** quote_lease / accept_quote: terms and the (test) payment at a glance. */
+const DealCard: ToolCallMessagePartComponent = (props) => {
+  const r = parseResult(props.result);
+  const offer = r?.offer as { price_cents?: number; duration_s?: number; status?: string } | undefined;
+  const lease = r?.lease as { price_cents?: number; state?: string; payment?: { label?: string } | null } | undefined;
+  const price = lease?.price_cents ?? offer?.price_cents;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <ToolCard {...props} />
+      {price !== undefined && (
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-line-strong px-2.5 py-1.5 font-mono text-[10.5px]">
+          <span className={lease?.state === "active" ? "text-mint" : "text-amber"}>{lease?.state ?? offer?.status ?? "offer"}</span>
+          <span className="text-ivory">${(price / 100).toFixed(2)}</span>
+          {offer?.duration_s && <span className="text-mute">{offer.duration_s}s</span>}
+          {lease?.payment && <span className="ml-auto truncate text-amber">test payment</span>}
+        </div>
       )}
     </div>
   );

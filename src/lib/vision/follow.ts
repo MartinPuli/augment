@@ -4,7 +4,7 @@
  * the crop is clamped inside the frame. Lock is kept until the target has been missing for
  * `lostMs`, then a new target is acquired (class filter + largest / most-moving heuristic).
  */
-import type { Box, Track } from "./tracker";
+import { netSpeed, type Box, type Track } from "./tracker";
 
 export type FollowStatus = "off" | "searching" | "locked" | "holding";
 
@@ -100,13 +100,15 @@ export class FollowCam {
     const inClass = tracks.filter((t) => !this.o.classes || this.o.classes.includes(t.label));
     // prefer established, confident, plausibly-sized tracks; fall back to anything in-class
     const solid = inClass.filter((t) => t.hits >= 4 && t.score >= 0.22 && (t.box.w * t.box.h) / area < 0.2);
-    const pool = solid.length ? solid : inClass.filter((t) => (t.box.w * t.box.h) / area < 0.35);
+    // genuinely moving (net displacement, not jitter) beats static look-alikes such as camera OSD text
+    const moving = solid.filter((t) => netSpeed(t) > Math.max(4, Math.hypot(t.box.w, t.box.h) * 0.35));
+    const pool = moving.length ? moving : solid.length ? solid : inClass.filter((t) => (t.box.w * t.box.h) / area < 0.35);
     if (!pool.length) return null;
     let best: Track | null = null;
     let bestS = -Infinity;
     for (const t of pool) {
       const size = Math.min(1, Math.sqrt((t.box.w * t.box.h) / area) / 0.25); // relative size, saturating
-      const motion = Math.min(1, t.speed / (diag * 0.02)); // "most-moving"
+      const motion = Math.min(1, netSpeed(t) / (diag * 0.02)); // "most-moving"
       const conf = Math.min(1, t.score / 0.5);
       const age = Math.min(1, t.hits / 15);
       const centre = 1 - Math.hypot(t.box.x + t.box.w / 2 - this.frameW / 2, t.box.y + t.box.h / 2 - this.frameH / 2) / diag;

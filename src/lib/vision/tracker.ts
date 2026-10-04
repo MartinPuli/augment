@@ -47,6 +47,14 @@ export interface Track {
   speed: number;
 }
 
+/** Net displacement speed over the trail window (px/s) — robust to box jitter, unlike `speed`. */
+export function netSpeed(t: Track): number {
+  const a = t.trail[0];
+  const b = t.trail[t.trail.length - 1];
+  if (!a || !b || b.t - a.t < 400) return 0;
+  return Math.hypot(b.x - a.x, b.y - a.y) / ((b.t - a.t) / 1000);
+}
+
 export interface TrackerOptions {
   highThresh?: number;
   lowThresh?: number;
