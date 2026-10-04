@@ -27,7 +27,7 @@ import { invoke } from "../invocations";
 import { publishFromAdapter } from "../registry";
 import { GhostError } from "../util";
 import { assertPublicHttpUrl, clampInt, env, errorResponse, readJson, requireEnv, UNTRUSTED_NOTE } from "../partners/common";
-import { EXA_SETUP, exaConfigured, exaSearch } from "../partners/exa";
+import { exaRead, EXA_SETUP, exaConfigured, exaSearch } from "../partners/exa";
 import { closeBrowser, DEFAULT_WAIT_MS, KERNEL_SETUP, kernelConfigured, kernelStatus, MAX_WAIT_MS } from "../partners/kernel";
 import { listInbox, MAIL_SETUP, mailConfigured, mailStatus, readMessage, sendReport } from "../partners/mail";
 import { callTool, listTools, mcpConfigured, mcpServers } from "../partners/mcp";
@@ -102,6 +102,15 @@ export function mountPartnerRoutes(app: Hono) {
       const body = await readJson<{ query: string; purpose: string; num_results: number }>(c);
       const out = await exaSearch(body);
       return c.json({ ...out, note: UNTRUSTED_NOTE });
+    }),
+  );
+
+  app.post(
+    "/partners/exa/read",
+    route(async (c) => {
+      if (!exaConfigured()) throw new GhostError(503, "Exa not configured", "not_configured");
+      const body = await readJson<{ urls?: string[]; query?: string; max_chars?: number }>(c);
+      return c.json({ ...(await exaRead(body)), note: UNTRUSTED_NOTE });
     }),
   );
 

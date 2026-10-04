@@ -15,6 +15,7 @@ import {
   Radar,
   Search,
   Workflow,
+  Timer,
   type LucideIcon,
 } from "lucide-react";
 import type { WidgetComponentProps } from "./types";
@@ -43,6 +44,7 @@ function lazy(loader: () => Promise<Record<string, unknown>>, name: string): Any
 const LiveViewWidget = lazy(() => import("./widgets/LiveViewWidget"), "LiveViewWidget");
 const PairPhoneWidget = lazy(() => import("./widgets/PairPhoneWidget"), "PairPhoneWidget");
 const ConnectHardwareWidget = lazy(() => import("./widgets/ConnectHardwareWidget"), "ConnectHardwareWidget");
+const TimerWidget = lazy(() => import("./widgets/TimerWidget"), "TimerWidget");
 const NetworkScanWidget = lazy(() => import("./widgets/NetworkScanWidget"), "NetworkScanWidget");
 
 export interface WidgetEntry {
@@ -65,4 +67,5 @@ export const WIDGETS: Record<string, WidgetEntry> = {
   web_view: { component: WebViewWidget, icon: Globe, size: "lg", label: "Web view" },
   results: { component: ResultsWidget, icon: Search, size: "md", label: "Results" },
   mission: { component: MissionWidget, icon: Workflow, size: "lg", label: "Mission" },
+  timer: { component: TimerWidget, icon: Timer, size: "sm", label: "Timer" },
 };
