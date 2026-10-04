@@ -13,7 +13,8 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { ArrowUp, CheckCircle2, ChevronDown, Loader2, X, XCircle } from "lucide-react";
+import { ArrowUp, ChevronDown, CircleCheck, CircleX, LoaderCircle, X } from "lucide";
+import { Icon } from "@/components/ui/Icon";
 import { useGhost, type UiMessage } from "@/lib/store";
 import { cancelRun, displayText, sendToPolty } from "@/lib/agent/runtime";
 import { TOOL_LABELS } from "@/lib/agent/tools";
@@ -50,7 +51,7 @@ export function ConversationDrawer() {
               </button>
             ))}
             <button onClick={() => useGhost.getState().set({ drawer: false })} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-fg-2 transition hover:bg-white/70 hover:text-fg" aria-label="Close panel">
-              <X size={15} />
+              <Icon icon={X} size={15} />
             </button>
           </header>
           {tab === "conversation" ? <Thread /> : <Trace />}
@@ -115,7 +116,7 @@ function Thread() {
             className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-[13.5px] text-fg outline-none placeholder:text-fg-3"
           />
           <ComposerPrimitive.Send className="grid h-9 w-9 place-items-center rounded-full bg-fg text-white shadow-[0_4px_12px_-4px_rgb(15_23_42/0.5)] transition hover:bg-fg/85 disabled:opacity-30 disabled:shadow-none">
-            <ArrowUp size={16} />
+            <Icon icon={ArrowUp} size={16} strokeWidth={2.2} />
           </ComposerPrimitive.Send>
         </ComposerPrimitive.Root>
       </ThreadPrimitive.Root>
@@ -150,15 +151,14 @@ const ToolCard: ToolCallMessagePartComponent = ({ toolName, args, result, isErro
   return (
     <div className="rounded-xl border border-white/70 bg-white/55 shadow-[inset_0_1px_0_rgb(255_255_255)]">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left">
-        {running ? (
-          <Loader2 size={13} className="animate-spin text-violet" />
-        ) : isError ? (
-          <XCircle size={13} className="text-coral" />
-        ) : (
-          <CheckCircle2 size={13} className="text-mint" />
-        )}
+        <Icon
+          icon={running ? LoaderCircle : isError ? CircleX : CircleCheck}
+          size={13}
+          spring="snappy"
+          className={clsx("shrink-0", running ? "animate-spin text-violet" : isError ? "text-coral" : "text-mint")}
+        />
         <span className="truncate font-mono text-[11px] text-fg-2">{TOOL_LABELS[toolName] ?? toolName}</span>
-        <ChevronDown size={13} className={clsx("ml-auto text-fg-3 transition", open && "rotate-180")} />
+        <Icon icon={ChevronDown} size={13} className={clsx("ml-auto text-fg-3 transition-transform duration-200", open && "rotate-180")} />
       </button>
       {open && (
         <pre className="ghost-scroll max-h-56 overflow-auto border-t border-line px-2.5 py-2 font-mono text-[10.5px] leading-snug whitespace-pre-wrap break-all text-fg-3">
