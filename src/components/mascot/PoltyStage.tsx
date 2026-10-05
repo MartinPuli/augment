@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useMotionValue, useSpring } from "motion/react";
+import { AnimatePresence, MotionConfig, motion, useMotionValue, useSpring } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { levels, useGhost } from "@/lib/store";
 import { Polty } from "./Polty";
@@ -181,17 +181,19 @@ export function PoltyStage({ onPoke }: { onPoke?: () => void }) {
         style={{ x: sx, y: sy, translateX: "-50%", translateY: "-50%", width: sizeS, rotate: useSpringRotate(sx) }}
       >
         <div className="pointer-events-auto relative">
-          <Polty
-            mood={mood}
-            activity={activity}
-            speechLevel={speechLevel}
-            micLevel={micLevel}
-            gaze={gaze}
-            sway={sway}
-            size={size}
-            className="h-auto w-full [filter:drop-shadow(0_0_0.75px_rgb(15_23_42/0.4))_drop-shadow(0_4px_8px_rgb(15_23_42/0.14))_drop-shadow(0_20px_30px_rgb(30_41_82/0.2))]"
-            onClick={onPoke}
-          />
+          <MotionConfig reducedMotion="user">
+            <Polty
+              mood={mood}
+              activity={activity}
+              speechLevel={speechLevel}
+              micLevel={micLevel}
+              gaze={gaze}
+              sway={sway}
+              size={size}
+              className="h-auto w-full [filter:drop-shadow(0_0_0.6px_rgb(72_58_170/0.3))_drop-shadow(0_6px_12px_rgb(92_76_206/0.18))]"
+              onClick={onPoke}
+            />
+          </MotionConfig>
           <AnimatePresence>
             {(possessing || toolStatus) && !hero && (
               <motion.div
