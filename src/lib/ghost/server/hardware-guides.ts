@@ -5,7 +5,7 @@ import { bad, notFound } from "./util";
 
 const root = path.resolve(process.cwd(), "resources/hardware-skills");
 const packs = [
-  { id: "ghost-hardware", source: "GHOST", revision: "1", license: "project", files: ["SKILL.md"], summary: "Connect and use GHOST hardware; owner pairing, leases, evidence, extension recipes." },
+  { id: "ghost-hardware", source: "GHOST", revision: "2", license: "project", files: ["SKILL.md", "printers.md"], summary: "Connect and use GHOST hardware; owner pairing, leases, evidence, 3D printers (OctoPrint, Moonraker), extension recipes." },
   ...sources.map(s => ({ ...s, summary: s.id === "esp32-development" ? "Board selection, firmware, buses, sensors and ESPHome. Knowledge only; no attached board implied." : "Home Assistant automation and device-control practices. Runtime access uses the local gateway." })),
 ];
 export function listHardwareGuides(query = "") {

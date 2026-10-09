@@ -14,7 +14,8 @@
     "infra:mission-test": "tsx scripts/infra-mission-test.ts",
     "infra:neon-check": "tsx scripts/infra-neon-check.ts",
     "hardware:gateway": "tsx connectors/lan/ghost-lan.ts",
-    "hardware:test": "tsx scripts/hardware-gateway-test.ts"
+    "hardware:test": "tsx scripts/hardware-gateway-test.ts",
+    "hardware:printer-test": "tsx scripts/printer-gateway-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

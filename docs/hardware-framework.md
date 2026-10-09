@@ -43,11 +43,15 @@ Exact upstream URLs, revisions and allowed files are in `resources/hardware-skil
 
 ## Capability coverage
 
+Printer adapters now add OctoPrint and Moonraker/Klipper status, temperatures and explicitly enabled pause/resume/cancel. Setup and capability limits are in [the printer guide](../resources/hardware-skills/ghost-hardware/printers.md). API keys stay on the owner gateway; job controls are disabled by default.
+
 Existing LAN drivers are reused: Home Assistant, Shelly, WLED, Tasmota, Elgato, already-paired Hue, legacy Kasa and Roku. Browser connectors already provide owner-authorized phone/laptop media, supported BLE profiles and the GHOST serial protocol. Public observation adapters include Caltrans and NOAA.
 
-Viam and OctoPrint/Moonraker were researched and are listed in the first-party skill as extension candidates. They are **not** implemented GHOST adapters. No robotics, printer movement, ESP32 flashing, or universal internet-device discovery was demonstrated in this change.
+Viam remains a researched extension candidate, not an implemented GHOST adapter. Printer API behavior was tested with simulators; no physical print, robot movement or ESP32 flashing was performed. The framework does not discover arbitrary internet devices.
 
 ## Verification (2026-10-09)
+
+- `pnpm hardware:printer-test`: **31 checks passed**, with two simulated printer APIs behind the real outbound gateway and MCP. Covered status/temperatures, explicit pause (no toggle), resume/cancel, idempotent retries, changed-file rejection, permission withdrawal, unconfirmed outcome, malformed replies and redirect refusal. Physical printer compatibility remains unverified.
 
 - `pnpm hardware:test`: **23 checks passed** using labeled, loopback-only Home Assistant/WLED/Shelly simulators. Real coordinator, HTTP, WebSocket, MCP, owner confirmation, allowlisting, sensor value/timestamp, light readback, JPEG upload, visitor approval/revocation, reconnect identity, missing-device unpublish and persistent action receipts.
 - `pnpm coord:smoke`: **75 passed, 0 failed**, including leases, exclusivity, test payments, quota, expiry, revocation and MCP image provenance.

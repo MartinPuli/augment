@@ -1,0 +1,18 @@
+[
+  {
+    "id": "workshop-octo",
+    "name": "Workshop printer",
+    "type": "octoprint",
+    "url": "http://octopi.local",
+    "api_key_env": "OCTOPRINT_API_KEY",
+    "allow_job_control": false
+  },
+  {
+    "id": "workshop-klipper",
+    "name": "Klipper printer",
+    "type": "moonraker",
+    "url": "http://klipper.local:7125",
+    "api_key_env": "MOONRAKER_API_KEY",
+    "allow_job_control": false
+  }
+]

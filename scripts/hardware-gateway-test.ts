@@ -24,6 +24,7 @@ async function main() {
   const port = Number(process.env.HARDWARE_TEST_PORT ?? 4381);
   const base = `http://127.0.0.1:${port}`;
   const simPorts = { SIM_SHELLY_PORT: "4382", SIM_WLED_PORT: "4383", SIM_HUE_PORT: "4384", SIM_ROKU_PORT: "4385", SIM_KASA_PORT: "4386", SIM_HA_PORT: "4387" };
+  delete process.env.GHOST_PRINTERS_CONFIG; // Never discover an operator's real printers in this simulator test.
   process.env.HA_URL = "http://127.0.0.1:4387"; process.env.HA_TOKEN = "sim-token";
   process.env.GHOST_LAN_STORE = path.join(stateDir, "lan.json"); process.env.GHOST_LAN_NO_PUBLISH = "1";
   process.env.GHOST_DB = "pglite"; delete process.env.DATABASE_URL;

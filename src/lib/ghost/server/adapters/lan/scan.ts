@@ -6,6 +6,7 @@ import { fingerprintElgato } from "./drivers/elgato";
 import { discoverHomeAssistant, haConfig } from "./drivers/homeassistant";
 import { fingerprintHue } from "./drivers/hue";
 import { fingerprintKasa, kasaTdpCandidate, kasaUdpDiscover } from "./drivers/kasa";
+import { discoverPrinters } from "./drivers/printers";
 import { fingerprintRoku, ROKU_PORT } from "./drivers/roku";
 import { fingerprintShelly } from "./drivers/shelly";
 import { fingerprintTasmota } from "./drivers/tasmota";
@@ -172,6 +173,8 @@ export async function scan(opts: ScanOptions = {}): Promise<ScanResult> {
     if (b) targets.add(b);
   }
 
+  const printerJob = discoverPrinters().catch(() => ({ discoveries: [] as AdapterDiscovery[], errors: ["Printer configuration could not be loaded; check GHOST_PRINTERS_CONFIG"] }));
+
   const haJob =
     opts.includeHomeAssistant !== false && haConfig()
       ? discoverHomeAssistant(log).then((r) => {
@@ -253,7 +256,10 @@ export async function scan(opts: ScanOptions = {}): Promise<ScanResult> {
   }
 
   const ha = await Promise.race([haJob, sleep(8000).then(() => [] as AdapterDiscovery[])]);
-  const discoveries = [...lan, ...ha];
+  const printers = await printerJob;
+  errors.push(...printers.errors);
+  sources.printers = printers.discoveries.length;
+  const discoveries = [...lan, ...ha, ...printers.discoveries];
   const verified = discoveries.filter((d) => d.status !== "candidate").length;
   let note: string | undefined;
   if (!v4.some((i) => isPrivateLanV4(i.address))) {

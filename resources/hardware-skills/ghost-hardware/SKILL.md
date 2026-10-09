@@ -38,9 +38,12 @@ Use `--no-discovery` to limit discovery to configured Home Assistant and `--extr
 
 A device connector publishes a stable local key, capability IDs, bounded input schemas, availability and evidence expectations. Implement the handler with the existing GhostConnector SDK. Keep provider credentials on the connector host; propagate cancellation; persist mutation receipts across restarts. Never expose an unrestricted shell, arbitrary URL fetching or raw movement commands as a generic substitute for a device adapter.
 
+## 3D printers
+
+OctoPrint and Moonraker adapters support status, temperatures and owner-enabled pause/resume/cancel through the LAN gateway. Read [printers.md](printers.md) for setup and the agent workflow. Tested against simulators; no real printer was actuated.
+
 ## Researched integrations (not implemented or hardware-tested in GHOST)
 
 - Viam: https://docs.viam.com/reference/mcp/ — authenticated access to machines already available to the user's Viam organization. Add a typed connector per component and explicit machine selection before advertising it in GHOST.
-- 3D printers: https://github.com/Villocity-Labs/mcp-printer — OctoPrint and Moonraker/Klipper tools. Begin with status/temperature/job observations; printing requires an owner-selected printer, reviewed job and device-specific verification. No universal printer execution adapter is included yet.
 
 The network grows when owners connect devices. There is no general entitlement or automatic connection to all hardware on the internet.

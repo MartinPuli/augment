@@ -4,6 +4,7 @@ import { elgatoDriver } from "./drivers/elgato";
 import { discoverHomeAssistant, homeAssistantDriver } from "./drivers/homeassistant";
 import { hueBridgeDriver, hueLightDriver } from "./drivers/hue";
 import { kasaDriver } from "./drivers/kasa";
+import { octoprintDriver, moonrakerDriver } from "./drivers/printers";
 import { rokuDriver } from "./drivers/roku";
 import { shellyDriver } from "./drivers/shelly";
 import { tasmotaDriver } from "./drivers/tasmota";
@@ -24,6 +25,8 @@ export type { ScanResult, ScanSummary, LanMeta, LanSupport } from "./types";
  */
 
 const DRIVERS: Partial<Record<DriverId, LanDriver>> = {
+  octoprint: octoprintDriver,
+  moonraker: moonrakerDriver,
   shelly: shellyDriver,
   wled: wledDriver,
   tasmota: tasmotaDriver,

@@ -2,6 +2,8 @@ import type { Device } from "../../../contracts";
 import type { AdapterDiscovery, AdapterResult, InvokeContext } from "../types";
 
 export type DriverId =
+  | "octoprint"
+  | "moonraker"
   | "shelly"
   | "wled"
   | "tasmota"
