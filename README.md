@@ -162,3 +162,7 @@ pnpm exec tsx scripts/lan-test.ts   # smart-home drivers against simulators
 MIT for original code — see [LICENSE](LICENSE). Public data sources keep their operators' terms
 (Caltrans, NOAA). Detector weights are downloaded at runtime from their publishers under their own
 licenses ([docs/public-sources.md](docs/public-sources.md)).
+
+## Hardware skills and remote LAN gateway
+
+GHOST now serves versioned GHOST, Home Assistant and ESP32 guides to MCP agents and Polty. An outbound owner-run gateway connects supported local devices to a hosted coordinator, with explicit device selection, owner-confirmed pairing, temporary access and persistent action receipts. See [the hardware framework guide](docs/hardware-framework.md) for setup, exact coverage and test evidence.

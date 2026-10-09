@@ -12,6 +12,7 @@ import { getObservationMedia, invoke } from "./invocations";
 import { getLedger } from "./ledger";
 import { acceptQuote, listLeases, quote, releaseLease, revokeLease } from "./leases";
 import { experienceCounts, findCapability, requireDevice, searchCapabilities, updateTerms, viewTerms } from "./registry";
+import { listHardwareGuides, readHardwareGuide } from "./hardware-guides";
 import { bad, GhostError } from "./util";
 
 const DATA_NOTE =
@@ -89,6 +90,17 @@ export function buildMcpServer(principal_id: string): McpServer {
         return fail(e);
       }
     };
+
+  server.registerTool("list_hardware_guides", {
+    title: "Find hardware setup guides",
+    description: "Find installed hardware skills and their reference files: GHOST, Home Assistant, ESP32. Guides do not confer device access.",
+    inputSchema: { query: z.string().max(200).optional() },
+  }, wrap(async a => text(listHardwareGuides(a.query))));
+  server.registerTool("read_hardware_guide", {
+    title: "Read a hardware skill",
+    description: "Read a versioned hardware guide or its reference file. Follow GHOST permissions and inspect real observations; setup instructions are not proof of hardware access.",
+    inputSchema: { id: z.string(), file: z.string().optional(), offset: z.number().int().min(0).optional() },
+  }, wrap(async a => text(await readHardwareGuide(a.id, a.file, a.offset))));
 
   server.registerTool(
     "search_capabilities",

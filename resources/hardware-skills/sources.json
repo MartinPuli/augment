@@ -1,0 +1,52 @@
+[
+  {
+    "id": "home-assistant-best-practices",
+    "source": "https://github.com/homeassistant-ai/skills/tree/3780b52a6b38ba8e9801ac45ccb80c4cccf2f800/skills/home-assistant-best-practices",
+    "revision": "3780b52a6b38ba8e9801ac45ccb80c4cccf2f800",
+    "license": "MIT",
+    "files": [
+      "LICENSE",
+      "SKILL.md",
+      "references/appdaemon.md",
+      "references/automation-actions.md",
+      "references/backups.md",
+      "references/blueprint-guide.md",
+      "references/dashboard-cards.md",
+      "references/dashboard-guide.md",
+      "references/device-control.md",
+      "references/domain-docs.md",
+      "references/examples.yaml",
+      "references/helper-selection.md",
+      "references/safe-refactoring.md",
+      "references/scenes.md",
+      "references/template-guidelines.md",
+      "references/triggers-and-conditions.md",
+      "references/yaml-only-integrations.md"
+    ]
+  },
+  {
+    "id": "esp32-development",
+    "source": "https://github.com/magnus919/agent-skills/tree/b45615b81418bd55fb32d66f31c833beb73f1b3f/esp32-development",
+    "revision": "b45615b81418bd55fb32d66f31c833beb73f1b3f",
+    "license": "MIT",
+    "files": [
+      "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "references/connectivity-power-and-ota.md",
+      "references/debugging-recovery-and-security.md",
+      "references/decisions-and-preflight.md",
+      "references/firmware-frameworks.md",
+      "references/hardware-and-electrical-safety.md",
+      "references/native-tool-workflows.md",
+      "references/peripherals-and-buses.md",
+      "references/sensors-actuators-and-calibration.md",
+      "references/source-index.md",
+      "templates/component-contract.md",
+      "templates/esphome-device.yaml",
+      "templates/esphome-secrets.yaml.example",
+      "templates/hardware-bringup.md",
+      "templates/platformio.ini"
+    ]
+  }
+]

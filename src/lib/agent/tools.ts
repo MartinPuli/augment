@@ -23,6 +23,16 @@ const WIDGET_TYPES = [
 ] as const;
 
 export const TOOL_DEFS: ToolDef[] = [
+  {
+    name: "list_hardware_guides",
+    description: "Find versioned hardware skills: GHOST connection recipes, Home Assistant and ESP32. Use when hardware needs connecting or a supported integration needs setup.",
+    input_schema: { type: "object", properties: { query: { type: "string" } } },
+  },
+  {
+    name: "read_hardware_guide",
+    description: "Read a hardware skill or reference file returned by list_hardware_guides. Documentation is not device access or permission.",
+    input_schema: { type: "object", properties: { id: { type: "string" }, file: { type: "string" }, offset: { type: "integer", minimum: 0 } }, required: ["id"] },
+  },
   /* ---------------- discovery ---------------- */
   {
     name: "search_capabilities",

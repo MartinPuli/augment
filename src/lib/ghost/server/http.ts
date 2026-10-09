@@ -3,6 +3,7 @@ import { streamSSE } from "hono/streaming";
 import type { AccessType, DeviceClass, InvokeRequest, QuoteRequest, SearchQuery } from "../contracts";
 import type { RecordExperienceRequest, TermsPatch } from "../client/api-types";
 import { getPrincipal, getPrincipalOptional, me } from "./auth";
+import { listHardwareGuides, readHardwareGuide } from "./hardware-guides";
 import { dbReady } from "./db";
 import { recallDeviceConnections } from "./device-connections";
 import { subscribe } from "./events";
@@ -62,6 +63,9 @@ function v1Routes(): Hono {
 
   v1.get("/health", (c) => c.json({ ok: true, protocol: "ghost/0.1", at: new Date().toISOString() }));
   v1.get("/me", async (c) => c.json(await me(c)));
+
+  v1.get("/hardware-guides", c => c.json(listHardwareGuides(c.req.query("q"))));
+  v1.get("/hardware-guides/:id", async c => c.json(await readHardwareGuide(c.req.param("id"), c.req.query("file"), Number(c.req.query("offset") ?? 0))));
 
   /* catalog */
   v1.get("/device-connections", async (c) => c.json(await recallDeviceConnections(await getPrincipal(c), {

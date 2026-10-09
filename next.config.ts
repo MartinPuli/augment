@@ -17,6 +17,7 @@ const publicHost = (() => {
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  outputFileTracingIncludes: { "/*": ["./resources/hardware-skills/**/*"] },
   // Deploy the UI independently while the live device coordinator owns its sockets.
   async rewrites() {
     const coordinator = process.env.GHOST_COORDINATOR_ORIGIN?.replace(/\/+$/, "");

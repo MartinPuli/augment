@@ -107,6 +107,12 @@ async function observationBlocks(obs: Observation | null | undefined, summary: R
 export async function executeTool(name: string, input: Record<string, unknown>, toolUseId: string, signal: AbortSignal): Promise<ToolOutcome> {
   try {
     switch (name) {
+      case "list_hardware_guides":
+        return { content: JSON.stringify(await ghost(`/hardware-guides?q=${encodeURIComponent(String(input.query ?? ""))}`)) };
+      case "read_hardware_guide": {
+        const qs = new URLSearchParams({ file: String(input.file ?? "SKILL.md"), offset: String(input.offset ?? 0) });
+        return { content: JSON.stringify(await ghost(`/hardware-guides/${encodeURIComponent(String(input.id))}?${qs}`)) };
+      }
       /* ---------------- discovery ---------------- */
       case "recall_device_connections": {
         const qs = new URLSearchParams();

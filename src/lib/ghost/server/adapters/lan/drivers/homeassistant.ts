@@ -324,7 +324,7 @@ function stateData(s: HaState): Record<string, unknown> {
     if (typeof a.brightness === "number") base.brightness = Math.round((a.brightness / 255) * 100);
     if (Array.isArray(a.rgb_color)) base.color = toHex(a.rgb_color as number[]);
     if (a.color_temp_kelvin) base.color_temp_k = a.color_temp_kelvin;
-    base.on = s.state === "on";
+    base.on = ["unknown", "unavailable"].includes(s.state) ? null : s.state === "on";
   } else if (domain === "media_player") {
     Object.assign(base, pick(["media_title", "media_artist", "source", "app_name", "is_volume_muted"]));
     if (typeof a.volume_level === "number") base.volume = Math.round(a.volume_level * 100);
@@ -334,11 +334,11 @@ function stateData(s: HaState): Record<string, unknown> {
     Object.assign(base, pick(["current_position"]));
   } else if (domain === "fan") {
     Object.assign(base, pick(["percentage", "preset_mode"]));
-    base.on = s.state === "on";
+    base.on = ["unknown", "unavailable"].includes(s.state) ? null : s.state === "on";
   } else {
     if (a.unit_of_measurement) base.unit = a.unit_of_measurement;
     if (a.device_class) base.device_class = a.device_class;
-    if (["switch", "input_boolean"].includes(domain)) base.on = s.state === "on";
+    if (["switch", "input_boolean"].includes(domain)) base.on = ["unknown", "unavailable"].includes(s.state) ? null : s.state === "on";
   }
   return base;
 }
@@ -356,7 +356,7 @@ function stateObservation(s: HaState, name: string, note?: string): ObservationI
     value = a.current_temperature;
     unit = String(a.temperature_unit ?? "°C");
   }
-  if (s.state === "unavailable") value = null;
+  if (s.state === "unavailable" || s.state === "unknown") value = null;
   return {
     kind: domain === "sensor" && typeof value === "number" ? "value" : "state",
     value,
@@ -364,7 +364,7 @@ function stateObservation(s: HaState, name: string, note?: string): ObservationI
     data: stateData(s),
     captured_at: capturedAt(s),
     source: { name: `${name} via Home Assistant` },
-    note: note ?? (s.state === "unavailable" ? "Home Assistant reports this entity as unavailable." : undefined),
+    note: note ?? (["unavailable", "unknown"].includes(s.state) ? `Home Assistant reports this entity as ${s.state}.` : undefined),
   };
 }
 

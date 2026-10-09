@@ -79,6 +79,7 @@ function lanInfo(device: Device, meta: LanMeta) {
 
 async function discover(ctx: AdapterContext): Promise<AdapterDiscovery[]> {
   const store = await loadStore();
+  if (process.env.NODE_ENV === "production" && !process.env.GHOST_LOCAL_LAN_OWNER_ID) return [];
   const out: AdapterDiscovery[] = [];
   // 1) Devices found by earlier scans, re-checked quickly so `online` is honest.
   const probeLimit = limiter(8);
@@ -95,19 +96,10 @@ async function discover(ctx: AdapterContext): Promise<AdapterDiscovery[]> {
       }),
     ),
   );
-  // 2) Home Assistant entities. Owner = the principal who last ran a LAN scan on this coordinator;
-  //    before anyone has scanned they are owned by provider:lan and shared at price 0, and the first
-  //    POST /lan/scan re-publishes (adopts) them under the caller.
-  const ha = await discoverHomeAssistant(ctx.log);
-  for (const d of ha.discoveries) {
-    if (store.owner_id) out.push({ ...d, owner_id: store.owner_id });
-    else
-      out.push({
-        ...d,
-        owner_id: LAN_PROVIDER,
-        manifest: { ...d.manifest, access_type: "owner_shared", terms: { ...d.manifest.terms, note: "Home Assistant device shared by this coordinator at no cost until its owner scans." } },
-      });
-  }
+  // Never expose unclaimed HA devices. Cloud deployments use outbound owner gateways.
+  const owner = process.env.GHOST_LOCAL_LAN_OWNER_ID || store.owner_id;
+  const ha = owner ? await discoverHomeAssistant(ctx.log) : { discoveries: [] };
+  for (const d of ha.discoveries) out.push({ ...d, owner_id: owner! });
   if (persisted.length || ha.discoveries.length) ctx.log(`lan: re-published ${persisted.length} remembered device(s) and ${ha.discoveries.length} Home Assistant entit(ies)`);
   return out;
 }

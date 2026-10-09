@@ -26,5 +26,7 @@ Dockerfile
 .dockerignore
 fly.toml
 
-# Hardware connectors run on the devices themselves, not in the coordinator image
-connectors/
+# Hardware connectors run on the devices themselves. The LAN gateway source is also
+# needed by the TypeScript integration tests checked during the application build.
+connectors/*
+!connectors/lan/

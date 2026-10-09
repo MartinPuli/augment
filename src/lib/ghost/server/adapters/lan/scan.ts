@@ -21,6 +21,8 @@ import type { Fingerprinter, HostHint, LanMeta, ScanResult } from "./types";
 
 export interface ScanOptions {
   timeoutMs?: number;
+  /** Disable LAN broadcasts; only configured extra hosts and Home Assistant are queried. */
+  discovery?: boolean;
   /** Include Home Assistant entities (if HA_URL/HA_TOKEN are set). Default true. */
   includeHomeAssistant?: boolean;
   /** Override GHOST_LAN_EXTRA_HOSTS (testing). */
@@ -179,7 +181,7 @@ export async function scan(opts: ScanOptions = {}): Promise<ScanResult> {
         })
       : Promise.resolve([] as AdapterDiscovery[]);
 
-  const discovery = await Promise.all([
+  const discovery = opts.discovery === false ? [] : await Promise.all([
     mdnsBrowse(timeoutMs, (hit) => {
       const h = touch(hit.ip, "mdns");
       if (!h) return;

@@ -85,6 +85,14 @@ async function runScan(owner_id: string, timeoutMs: number): Promise<LanScanResp
 export function mountLanRoutes(app: Hono) {
   app.post("/lan/scan", async (c) => {
     const principal = await getPrincipal(c);
+    const configuredOwner = process.env.GHOST_LOCAL_LAN_OWNER_ID;
+    if (process.env.NODE_ENV === "production" && !configuredOwner) {
+      throw new GhostError(403, "This hosted coordinator cannot scan your LAN. Run the GHOST LAN gateway on your own network.", "gateway_required");
+    }
+    const rememberedOwner = (await loadStore()).owner_id;
+    if ((configuredOwner && configuredOwner !== principal) || (rememberedOwner && rememberedOwner !== principal)) {
+      throw new GhostError(403, "Only the configured LAN owner may scan this network. Connect your own gateway instead.", "forbidden");
+    }
     let raw: unknown = {};
     const text = await c.req.text();
     if (text.trim()) {

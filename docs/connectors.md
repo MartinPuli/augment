@@ -198,3 +198,7 @@ Not tested on real hardware yet:
   are lower confidence than ELK-BLEDOM/Triones).
 - Web Serial with a physical Arduino; the sketch has not been built with the AVR toolchain.
 - Raspberry Pi GPIO servo (gpiozero) and picamera2.
+
+## Outbound LAN gateway
+
+`pnpm hardware:gateway --discover` lists supported devices. Pair with `--coordinator https://HOST --pair CODE --allow LOCAL_KEY`, then confirm in GHOST. Home Assistant credentials stay on that gateway host. Unlike the browser SDK’s memory-only result cache, this Node gateway also persists action receipts across restarts. See [hardware-framework.md](hardware-framework.md).
