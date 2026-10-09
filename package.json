@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch --clear-screen=false --exclude \".next/**\" --exclude \".ghost/**\" --exclude \"src/app/**\" --exclude \"src/components/**\" server.ts",
-    "build": "next build",
+    "build": "tsx scripts/fetch-illustrations.ts --soft && next build",
     "start": "NODE_ENV=production tsx server.ts",
     "lint": "eslint",
     "coord:smoke": "tsx scripts/coord-smoke.ts",
