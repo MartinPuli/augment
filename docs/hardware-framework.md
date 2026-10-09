@@ -63,6 +63,14 @@ Live evidence is in the ignored `.ghost/hardware-public-evidence/` directory. Re
 
 ## Deployment
 
+### Local agent demo
+
+Run `node --import tsx scripts/dot-hardware-demo.ts` with Node 22.13+ to keep an isolated coordinator and two loopback-only simulated printers available at port 4411. No LAN discovery or public adapters run. In a second terminal (same repository), run `node --import tsx scripts/dot-hardware-client.ts tools/list`; replace `tools/list` with a tool name and a quoted JSON argument to make individual MCP calls. The client reads the demo connection locally and never prints its token.
+
+An agent can use this client to discover tools, read the printer guide, inspect devices, read status, pause, resume and verify status. The client does not choose actions for the agent. Invocation evidence and simulated printer commands are saved under the ignored `.ghost/dot-hardware-demo/run-*/evidence.jsonl` directory. These are simulated devices with real GHOST/MCP transport, not evidence of physical printing. Stop the demo process after testing; its credentials and device identities are ephemeral.
+
+### Hosting status
+
 Current status: production build prepared; Fly.io deployment is waiting for account sign-in. No new public deployment has been claimed or created.
 
 Use the existing custom Node server and `fly.toml`: one coordinator instance with persistent `.ghost` storage and WebSocket support. Its Docker image includes `resources/hardware-skills`; connectors run separately at the hardware site. The production coordinator blocks LAN scanning unless an operator explicitly sets `GHOST_LOCAL_LAN_OWNER_ID` for a private LAN installation. Do not set that variable on a public cloud host.
