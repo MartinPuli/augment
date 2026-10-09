@@ -19,6 +19,8 @@ import {
 import { getLedger } from "./ledger";
 import { acceptQuote, approveLease, getLease, getOffer, listLeases, quote, releaseLease, revokeLease } from "./leases";
 import { handleMcp } from "./mcp";
+import { createPoppyApp, poppyOptionsFromEnv } from "./poppy/routes";
+import type { PoppyOptions } from "./poppy/auth";
 import { confirmPairing, createPairing, listConnectors, listPairings, rejectPairing } from "./pairings";
 import { listDevices, requireDevice, searchCapabilities, updateTerms } from "./registry";
 import { mountExtraRoutes } from "./routes/extra";
@@ -195,7 +197,7 @@ function v1Routes(): Hono {
 }
 
 /** The coordinator HTTP app: /api/v1/* and /mcp. */
-export function createApiApp(): Hono {
+export function createApiApp(options: { poppy?: PoppyOptions } = {}): Hono {
   const app = new Hono();
   app.use("*", async (_c, next) => {
     await dbReady();
@@ -209,6 +211,8 @@ export function createApiApp(): Hono {
     return c.json({ error: "internal error", detail: (err as Error).message }, 500);
   });
   app.notFound((c) => c.json({ error: `no route for ${c.req.method} ${new URL(c.req.url).pathname}` }, 404));
+  const poppy = options.poppy ?? poppyOptionsFromEnv();
+  if (poppy) app.route("/", createPoppyApp(poppy));
   app.route("/api/v1", v1Routes());
   app.all("/mcp", handleMcp);
   app.all("/mcp/*", handleMcp);

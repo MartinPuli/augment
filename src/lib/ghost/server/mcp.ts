@@ -34,7 +34,7 @@ function toRef(ref: string): CapabilityRef {
   return r;
 }
 
-async function invokeResult(res: InvokeResponse): Promise<CallToolResult> {
+export async function invokeResult(res: InvokeResponse): Promise<CallToolResult> {
   const { invocation, observation } = res;
   const content: CallToolResult["content"] = [];
   const provenance = {

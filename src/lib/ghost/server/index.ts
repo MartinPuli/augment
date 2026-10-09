@@ -10,6 +10,7 @@ import { createApiApp } from "./http";
 import { sweep } from "./leases";
 import { publishFromAdapter } from "./registry";
 import { S } from "./state";
+import { isPoppyPath } from "./poppy/routes";
 
 export interface Coordinator {
   app: Hono;
@@ -31,7 +32,7 @@ export interface StartOptions extends DbOptions {
 }
 
 export function ownsPath(pathname: string): boolean {
-  return pathname.startsWith("/api/v1/") || pathname === "/api/v1" || pathname === "/mcp" || pathname.startsWith("/mcp/") || pathname.startsWith("/mcp?");
+  return isPoppyPath(pathname) || pathname.startsWith("/api/v1/") || pathname === "/api/v1" || pathname === "/mcp" || pathname.startsWith("/mcp/") || pathname.startsWith("/mcp?");
 }
 
 async function discoverAdapters() {

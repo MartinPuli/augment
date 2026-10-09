@@ -15,7 +15,8 @@
     "infra:neon-check": "tsx scripts/infra-neon-check.ts",
     "hardware:gateway": "tsx connectors/lan/ghost-lan.ts",
     "hardware:test": "tsx scripts/hardware-gateway-test.ts",
-    "hardware:printer-test": "tsx scripts/printer-gateway-test.ts"
+    "hardware:printer-test": "tsx scripts/printer-gateway-test.ts",
+    "poppy:test": "tsx scripts/poppy-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
@@ -38,6 +39,7 @@
     "exa-js": "^2.25.0",
     "hls.js": "^1.7.3",
     "hono": "4.13.12",
+    "jose": "6.2.12",
     "lucide": "1.51.0",
     "lucide-react": "1.51.0",
     "morphicons": "^1.7.1",

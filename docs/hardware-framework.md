@@ -27,6 +27,8 @@ The gateway refreshes every 30 seconds and unpublishes missing devices. Control 
 
 ## Agent skill interface
 
+An opt-in [Poppy draft integration](poppy.md) now exposes these guides and public observations to signed, registered personal agents through a separate guest MCP endpoint. Account access and rental operations are not yet advertised through Poppy.
+
 - `list_hardware_guides(query?)`: lists packages, source revision and exact reference-file names.
 - `read_hardware_guide(id, file?, offset?)`: reads an allowed file in chunks; follow `next_offset` for the rest.
 - The same interface is available over HTTP at `/api/v1/hardware-guides` and `/api/v1/hardware-guides/:id`.

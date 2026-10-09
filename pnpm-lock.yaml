@@ -72,6 +72,9 @@ importers:
       hono:
         specifier: 4.13.12
         version: 4.13.12
+      jose:
+        specifier: 6.2.12
+        version: 6.2.12
       lucide:
         specifier: 1.51.0
         version: 1.51.0
