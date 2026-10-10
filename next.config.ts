@@ -17,7 +17,7 @@ const publicHost = (() => {
 
 const nextConfig: NextConfig = {
   devIndicators: false,
-  serverExternalPackages: ["agentmail", "@mastra/core", "@mastra/libsql", "@mastra/pg", "@mastra/observability", "libsql", "@libsql/client"],
+  serverExternalPackages: ["@electric-sql/pglite", "agentmail", "@mastra/core", "@mastra/libsql", "@mastra/pg", "@mastra/observability", "libsql", "@libsql/client"],
   outputFileTracingIncludes: { "/*": ["./resources/hardware-skills/**/*"] },
   // Deploy the UI independently while the live device coordinator owns its sockets.
   async rewrites() {

@@ -1,18 +1,11 @@
+import { mountAccountRoutes } from "../accounts";
 import type { Hono } from "hono";
 import { mountProxyRoutes } from "./proxy";
 import { mountLanRoutes } from "./lan";
-import { mountPartnerRoutes } from "./partners";
-import { mountMissionRoutes } from "../missions/routes";
-import { mountGoogleRoutes } from "./google";
 
-/**
- * Extra coordinator routes contributed by workstreams. Mounted under /api/v1 by the core HTTP app.
- * Each mount function receives the /api/v1 sub-app.
- */
+/** Physical device discovery and operator media. General software services are retired. */
 export function mountExtraRoutes(app: Hono) {
+  mountAccountRoutes(app);
   mountProxyRoutes(app);
   mountLanRoutes(app);
-  mountPartnerRoutes(app);
-  mountMissionRoutes(app);
-  mountGoogleRoutes(app);
 }

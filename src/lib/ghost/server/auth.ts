@@ -112,6 +112,7 @@ export async function getPrincipal(c: Context): Promise<string> {
 
 /** GET /api/v1/me — creates the principal on first visit and sets the httpOnly cookie. */
 export async function me(c: Context): Promise<MeResponse> {
+  c.header("Cache-Control", "private, no-store");
   let p = await getPrincipalOptional(c);
   if (!p) p = await createPrincipal();
   const proto = c.req.header("x-forwarded-proto") ?? new URL(c.req.url).protocol.replace(":", "");

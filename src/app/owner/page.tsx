@@ -1580,7 +1580,7 @@ export default function OwnerConsolePage() {
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className={cx(btnSecondaryBare, "pr-4 pl-3")}>
             <Icon icon={ArrowLeft} size={16} />
-            Back to Polty
+            Back to GHOST
           </Link>
           <span
             className={cx(

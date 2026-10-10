@@ -60,7 +60,7 @@ export default function DevicesPage() {
   return (
     <main className="mx-auto min-h-dvh max-w-6xl px-4 pb-16 pt-[max(24px,env(safe-area-inset-top))] text-fg sm:px-8 sm:pt-10">
       <Link href="/" className="ghost-chip inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-caption font-medium text-fg-2 transition-colors hover:text-fg">
-        <Icon icon={ArrowLeft} size={14} /> Back to Polty
+        <Icon icon={ArrowLeft} size={14} /> Back to GHOST
       </Link>
       <header className="my-8 max-w-2xl">
         <p className="text-caption font-medium text-mint">Give your agent a body</p>

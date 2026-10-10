@@ -12,7 +12,7 @@ import type { AcceptResponse, ExperienceSearchResponse, LedgerResponse, PairingI
 import { startCoordinator } from "../src/lib/ghost/server";
 import { internalAdapters } from "../src/lib/ghost/server/adapters";
 import type { InternalAdapter } from "../src/lib/ghost/server/adapters/types";
-import { subscribe } from "../src/lib/ghost/server/events";
+import { emit, subscribe } from "../src/lib/ghost/server/events";
 import { db } from "../src/lib/ghost/server/db";
 import { acceptQuote } from "../src/lib/ghost/server/leases";
 import { publishFromAdapter } from "../src/lib/ghost/server/registry";
@@ -388,9 +388,11 @@ async function main() {
 
   console.log("\n# SSE + MCP");
   const ac = new AbortController();
-  const sse = await fetch(`${BASE}/api/v1/events`, { signal: ac.signal });
+  ok((await fetch(`${BASE}/api/v1/events`)).status === 401, "anonymous event stream refused");
+  const sse = await fetch(`${BASE}/api/v1/events`, { signal: ac.signal, headers: { authorization: `Bearer ${bob.owner_token}` } });
   ok(sse.headers.get("content-type")?.includes("text/event-stream"), "GET /events is an SSE stream");
   const reader = sse.body!.getReader();
+  emit({ type: "ledger.updated", principal_id: owner.principal_id, balance_cents: 987654321 });
   void api(owner.owner_token, "PATCH", `/api/v1/devices/${lampId}/terms`, { note: "sse test" });
   let sseText = "";
   const until = Date.now() + 3000;
@@ -400,6 +402,7 @@ async function main() {
     sseText += new TextDecoder().decode(value);
   }
   ok(sseText.includes('"type":"device.updated"'), "SSE delivered device.updated");
+  ok(!sseText.includes("987654321"), "event stream excludes another account’s private activity");
   ac.abort();
 
   const mcpHeaders = { authorization: `Bearer ${bob.owner_token}`, "content-type": "application/json", accept: "application/json, text/event-stream" };

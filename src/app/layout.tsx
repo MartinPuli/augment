@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { fontFaceCss } from "./fonts";
-import { NatureBackground } from "@/components/background/NatureBackground";
 
 // Geist is the fallback for Maison Neue (body); Geist Mono is for codes and ids.
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -12,8 +11,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GHOST — Polty, your personal agent",
-  description: "A personal agent that can also borrow real-world eyes and hands: cameras, sensors, lights, robots and instruments.",
+  title: "GHOST — Hardware for your agent",
+  description: "Connect your agent to cameras, sensors and supported hardware through one MCP endpoint. Discover capabilities, request access and inspect real observations.",
 };
 
 export const viewport: Viewport = {
@@ -32,7 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style href="ghost-fonts" precedence="default">
           {fontFaceCss()}
         </style>
-        <NatureBackground />
         {children}
       </body>
     </html>

@@ -33,6 +33,11 @@ type DeviceRow = {
   updated_at: unknown;
 };
 
+/** Keep historical rows, but never discover or invoke retired software integrations. */
+export function isHardwareConnector(connector_id: string): boolean {
+  return !connector_id.startsWith("internal:svc-") && connector_id !== "internal:kernel";
+}
+
 const ACCESS_TYPES: AccessType[] = ["public_observation", "own_device", "owner_shared", "provider_booked"];
 const STATUSES: CatalogStatus[] = ["candidate", "configured", "verified", "unavailable"];
 
@@ -120,7 +125,7 @@ export function normalizeManifest(raw: unknown): DeviceManifest {
 
 export async function getDevice(device_id: string, q: Queryable = db()): Promise<Device | null> {
   const r = await q.query<DeviceRow>(`select * from devices where device_id = $1`, [device_id]);
-  return r.rows[0] ? rowToDevice(r.rows[0]) : null;
+  return r.rows[0] && isHardwareConnector(r.rows[0].connector_id) ? rowToDevice(r.rows[0]) : null;
 }
 
 export async function requireDevice(device_id: string, q: Queryable = db()): Promise<Device> {
@@ -144,7 +149,7 @@ export async function listDevices(opts: { owner_id?: string; connector_id?: stri
     `select * from devices ${where.length ? "where " + where.join(" and ") : ""} order by created_at desc`,
     params,
   );
-  const devices = r.rows.map(rowToDevice);
+  const devices = r.rows.filter(r => isHardwareConnector(r.connector_id)).map(rowToDevice);
   if (!devices.length) return devices;
   const locks = await db().query<{ device_id: string; lease_id: string }>(
     `select distinct device_id, lease_id from lease_locks where held and device_id = any($1::text[])`,
@@ -368,7 +373,7 @@ async function catalogSnapshot(): Promise<Device[]> {
   const hit = S().cache.get("catalog");
   if (hit && Date.now() - hit.at < 5000) return hit.value as Device[];
   const r = await db().query<DeviceRow>(`select * from devices where status <> 'unavailable'`);
-  const devices = r.rows.map(rowToDevice);
+  const devices = r.rows.filter(r => isHardwareConnector(r.connector_id)).map(rowToDevice);
   S().cache.set("catalog", { at: Date.now(), value: devices });
   return devices;
 }

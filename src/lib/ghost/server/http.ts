@@ -4,7 +4,7 @@ import type { AccessType, DeviceClass, InvokeRequest, QuoteRequest, SearchQuery 
 import type { RecordExperienceRequest, TermsPatch } from "../client/api-types";
 import { getPrincipal, getPrincipalOptional, me } from "./auth";
 import { listHardwareGuides, readHardwareGuide } from "./hardware-guides";
-import { dbReady } from "./db";
+import { db, dbReady } from "./db";
 import { recallDeviceConnections } from "./device-connections";
 import { subscribe } from "./events";
 import { recallExperience, recordExperience } from "./experiences";
@@ -173,13 +173,30 @@ function v1Routes(): Hono {
   v1.get("/ledger", async (c) => c.json(await getLedger(await getPrincipal(c))));
 
   /* live events */
-  v1.get("/events", (c) => {
+  v1.get("/events", async (c) => {
+    const principal = await getPrincipal(c);
     c.header("Cache-Control", "no-cache, no-transform");
     c.header("X-Accel-Buffering", "no");
     return streamSSE(c, async (stream) => {
       let closed = false;
       const unsub = subscribe((e) => {
-        if (!closed) void stream.writeSSE({ data: JSON.stringify(e) }).catch(() => {});
+        // Private actions must never spill into another account's event stream.
+        const deliver = async () => {
+          let allowed = false;
+          switch (e.type) {
+            case "device.published": case "device.updated": case "device.removed": allowed = true; break;
+            case "pairing.pending": allowed = e.owner_id === principal; break;
+            case "pairing.confirmed": allowed = !!(await db().query("select pairing_id from pairings where pairing_id=$1 and owner_id=$2", [e.pairing_id, principal])).rows.length; break;
+            case "lease.updated": allowed = e.lease.owner_id === principal || e.lease.visitor_id === principal; break;
+            case "offer.updated": allowed = e.offer.owner_id === principal || e.offer.visitor_id === principal; break;
+            case "invocation.updated": allowed = e.invocation.visitor_id === principal; break;
+            case "ledger.updated": allowed = e.principal_id === principal; break;
+            // Observations are returned to the authorized caller; logs are server diagnostics.
+            case "observation.created": case "log": break;
+          }
+          if (allowed && !closed) await stream.writeSSE({ data: JSON.stringify(e) });
+        };
+        void deliver().catch(() => {});
       });
       const ka = setInterval(() => {
         if (!closed) void stream.write(": keep-alive\n\n").catch(() => {});

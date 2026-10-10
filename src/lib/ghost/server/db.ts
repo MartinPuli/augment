@@ -42,6 +42,11 @@ const MIGRATIONS: string[] = [
     kind text not null default 'human',
     created_at timestamptz not null default now()
   )`,
+  `create table if not exists accounts (principal_id text primary key references principals(principal_id), username text not null unique, password_salt text not null, password_hash text not null, created_at timestamptz not null default now())`,
+  `create table if not exists agent_credentials (agent_id text primary key, owner_id text not null references principals(principal_id), principal_id text not null unique references principals(principal_id), name text not null, token_hash text not null unique, permission text not null, max_spend_cents integer not null default 0, created_at timestamptz not null default now(), revoked_at timestamptz)`,
+  `create index if not exists agent_credentials_owner on agent_credentials(owner_id)`,
+  `create table if not exists agent_tool_calls (call_id text primary key, agent_id text not null references agent_credentials(agent_id), tool text not null, arguments jsonb not null, state text not null default 'running', result text, created_at timestamptz not null default now(), finished_at timestamptz)`,
+  `create index if not exists agent_tool_calls_recent on agent_tool_calls(agent_id,created_at desc)`,
   `create table if not exists connectors (
     connector_id text primary key,
     owner_id text not null,

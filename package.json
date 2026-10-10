@@ -17,7 +17,10 @@
     "hardware:test": "tsx scripts/hardware-gateway-test.ts",
     "hardware:printer-test": "tsx scripts/printer-gateway-test.ts",
     "poppy:test": "tsx scripts/poppy-test.ts",
-    "distributed:test": "tsx scripts/distributed-test.ts"
+    "distributed:test": "tsx scripts/distributed-test.ts",
+    "coordinator": "node --import tsx scripts/coordinator.ts",
+    "hardware:focus-test": "node --import tsx scripts/hardware-focus-test.ts",
+    "accounts:test": "node --import tsx scripts/account-agent-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
