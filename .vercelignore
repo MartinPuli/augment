@@ -1,0 +1,10 @@
+.ghost/
+.mastra/
+.env*
+!.env.example
+.git/
+node_modules/
+.next/
+tiempos-font-family/
+docs/alpha-dot-demo.md
+scripts/alpha-mcp-demo.ts

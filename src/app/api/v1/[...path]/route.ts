@@ -1,0 +1,10 @@
+import { coordinatorRequest } from "@/lib/ghost/server/vercel";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+export const GET = coordinatorRequest;
+export const POST = coordinatorRequest;
+export const PATCH = coordinatorRequest;
+export const PUT = coordinatorRequest;
+export const DELETE = coordinatorRequest;
+export const OPTIONS = coordinatorRequest;

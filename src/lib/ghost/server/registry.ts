@@ -1,3 +1,4 @@
+import { distributed } from "./cluster";
 import type {
   AccessType,
   CapabilityHit,
@@ -50,7 +51,7 @@ export function rowToDevice(r: DeviceRow): Device {
     owner_id: r.owner_id,
     connector_id: r.connector_id,
     status: r.status,
-    online: !!r.online,
+    online: !!r.online && (!distributed() || r.connector_id.startsWith("internal:") || !!r.last_heartbeat && Date.now()-new Date(iso(r.last_heartbeat)).getTime()<20_000),
     last_heartbeat: isoOrNull(r.last_heartbeat),
     created_at: iso(r.created_at),
     updated_at: iso(r.updated_at),

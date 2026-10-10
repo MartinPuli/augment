@@ -1,3 +1,5 @@
+import { background, cluster, distributed } from "./cluster";
+import type { GhostEvent } from "../contracts";
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
 import { getRequestListener } from "@hono/node-server";
@@ -5,7 +7,7 @@ import type { Hono } from "hono";
 import { internalAdapters } from "./adapters";
 import { createDeviceChannel, DEVICE_CHANNEL_PATH, heartbeatSweep, pingConnectors } from "./channel";
 import { db, openDb, type DbOptions } from "./db";
-import { log } from "./events";
+import { emitLocal, log } from "./events";
 import { createApiApp } from "./http";
 import { sweep } from "./leases";
 import { publishFromAdapter } from "./registry";
@@ -36,9 +38,14 @@ export function ownsPath(pathname: string): boolean {
 }
 
 async function discoverAdapters() {
-  for (const adapter of internalAdapters) {
-    if (!adapter.discover) continue;
-    void (async () => {
+  if (distributed()) {
+    const claimed = await db().query(`insert into ghost_routes(route_key,instance_id,session_token,expires_at) values ('adapter-refresh',$1,$1,now()+interval '10 minutes')
+      on conflict(route_key) do update set instance_id=$1,session_token=$1,expires_at=excluded.expires_at where ghost_routes.expires_at<now() returning route_key`, [cluster().instance]);
+    if (!claimed.rowCount) return;
+  }
+  await Promise.all(internalAdapters.map(async (adapter) => {
+    if (!adapter.discover) return;
+    await (async () => {
       try {
         const found = await adapter.discover!({ log: (m) => log("info", `[${adapter.id}] ${m}`) });
         if (found?.length) {
@@ -49,7 +56,7 @@ async function discoverAdapters() {
         log("warn", `adapter ${adapter.id} discovery failed: ${(e as Error).message}`);
       }
     })();
-  }
+  }));
 }
 
 /**
@@ -64,8 +71,9 @@ export function startCoordinator(opts: StartOptions = {}): Promise<Coordinator> 
     const database = await openDb(opts);
     log("info", `database ready (${database.kind === "postgres" ? "Postgres via DATABASE_URL" : "embedded PGlite"})`);
     // After a restart no connector is connected: their devices are offline until they reconnect.
-    await db().query(`update devices set online = false, updated_at = now() where connector_id not like 'internal:%' and online`);
+    if (!distributed()) await db().query(`update devices set online = false, updated_at = now() where connector_id not like 'internal:%' and online`);
 
+    if (distributed()) await cluster().bind(`events:${cluster().instance}`, payload => emitLocal(payload as GhostEvent));
     let sweeping = false;
     let lastSweepError = 0;
     st.timers.push(
@@ -87,7 +95,7 @@ export function startCoordinator(opts: StartOptions = {}): Promise<Coordinator> 
     st.timers.push(setInterval(() => pingConnectors(), 10_000));
     for (const t of st.timers) t.unref?.();
 
-    if (!opts.skipAdapters && process.env.GHOST_SKIP_ADAPTERS !== "1") void discoverAdapters();
+    if (!opts.skipAdapters && process.env.GHOST_SKIP_ADAPTERS !== "1") background(discoverAdapters());
 
     const app = createApiApp();
     const requestListener = getRequestListener(app.fetch) as Coordinator["requestListener"];
@@ -114,6 +122,7 @@ export function startCoordinator(opts: StartOptions = {}): Promise<Coordinator> 
         }
         st.connectors.clear();
         channel.wss.close();
+        if (distributed()) await cluster().stop();
         await db().close().catch(() => {});
         st.db = null;
         st.dbPromise = null;

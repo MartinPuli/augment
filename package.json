@@ -16,7 +16,8 @@
     "hardware:gateway": "tsx connectors/lan/ghost-lan.ts",
     "hardware:test": "tsx scripts/hardware-gateway-test.ts",
     "hardware:printer-test": "tsx scripts/printer-gateway-test.ts",
-    "poppy:test": "tsx scripts/poppy-test.ts"
+    "poppy:test": "tsx scripts/poppy-test.ts",
+    "distributed:test": "tsx scripts/distributed-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
@@ -33,6 +34,7 @@
     "@modelcontextprotocol/sdk": "^1.32.0",
     "@onkernel/sdk": "^0.119.0",
     "@opentelemetry/api": "^1.9.1",
+    "@vercel/functions": "^3.9.11",
     "agentmail": "^0.5.35",
     "bonjour-service": "^1.4.4",
     "clsx": "^2.1.1",

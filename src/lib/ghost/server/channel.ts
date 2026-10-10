@@ -1,3 +1,4 @@
+import { background, cluster, distributed } from "./cluster";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -15,7 +16,7 @@ import {
   touchHeartbeat,
   unpublishFromConnector,
 } from "./registry";
-import { S, sendTo, type ConnectorSession } from "./state";
+import { connectorOnline, S, sendTo, sendToConnector, type ConnectorSession } from "./state";
 
 export const DEVICE_CHANNEL_PATH = "/v1/device-channel";
 export const HEARTBEAT_TIMEOUT_MS = 15_000;
@@ -29,6 +30,9 @@ interface SocketCtx {
   connector_id?: string;
   owner_id?: string;
   pairing_id?: string;
+  connectorRoute?: string;
+  pairingRoute?: string;
+  signalRoutes: Map<string,string>;
   /** signal sessions opened by this socket as a viewer */
   sessions: Set<string>;
 }
@@ -49,7 +53,8 @@ function cookieValue(req: IncomingMessage, name: string): string | null {
   return null;
 }
 
-function attachConnector(ctx: SocketCtx, connector_id: string, owner_id: string, credential: string) {
+async function attachConnector(ctx: SocketCtx, connector_id: string, owner_id: string, credential: string) {
+  if (ctx.socket.readyState !== 1) return;
   const st = S();
   const prev = st.connectors.get(connector_id);
   if (prev && prev.socket !== ctx.socket) {
@@ -64,6 +69,14 @@ function attachConnector(ctx: SocketCtx, connector_id: string, owner_id: string,
   ctx.owner_id = owner_id;
   const session: ConnectorSession = { connector_id, owner_id, socket: ctx.socket, last_heartbeat: Date.now(), origin: ctx.origin };
   st.connectors.set(connector_id, session);
+  if (distributed()) {
+    ctx.connectorRoute = (await cluster().bind(`connector:${connector_id}`, async msg => {
+      const command = msg as { type: string; deadline?: string };
+      if (command.type === "invoke" && (!command.deadline || Date.parse(command.deadline) <= Date.now())) return;
+      sendTo(ctx.socket, msg);
+    }, { lost: () => ctx.socket.close(4000, "superseded") }))!;
+    if (ctx.socket.readyState !== 1) { await onClose(ctx); return; }
+  }
   sendTo(ctx.socket, { type: "welcome", connector_id, owner_id, credential });
   // Devices come back online on reconnect. Leases are time-based; reconnection never reactivates them.
   void setConnectorDevicesOnline(connector_id, true).catch(() => {});
@@ -89,6 +102,12 @@ async function canView(principal_id: string, device_id: string): Promise<boolean
 
 async function handleMessage(ctx: SocketCtx, msg: ConnectorMessage) {
   const st = S();
+  if (ctx.socket.readyState !== 1) return;
+  if (msg.type === "hello" && (ctx.connector_id || ctx.pairing_id)) return;
+  if (distributed() && ctx.connector_id && ctx.connectorRoute) {
+    const live = await db().query(`select 1 from ghost_routes where route_key=$1 and session_token=$2 and expires_at>now()`, [`connector:${ctx.connector_id}`,ctx.connectorRoute]);
+    if (!live.rowCount) { ctx.socket.close(4000,"superseded"); return; }
+  }
   switch (msg.type) {
     case "hello": {
       if (msg.protocol_version && msg.protocol_version !== PROTOCOL_VERSION) {
@@ -104,7 +123,7 @@ async function handleMessage(ctx: SocketCtx, msg: ConnectorMessage) {
           ctx.socket.close(4001, "unknown credential");
           return;
         }
-        attachConnector(ctx, c.connector_id, c.owner_id, msg.credential);
+        await attachConnector(ctx, c.connector_id, c.owner_id, msg.credential);
         return;
       }
       if (msg.owner_token) {
@@ -115,7 +134,7 @@ async function handleMessage(ctx: SocketCtx, msg: ConnectorMessage) {
           return;
         }
         const { connector_id, credential } = await ownerConnector(p.principal_id, label, kind);
-        attachConnector(ctx, connector_id, p.principal_id, credential);
+        await attachConnector(ctx, connector_id, p.principal_id, credential);
         return;
       }
       if (msg.pairing_code) {
@@ -131,6 +150,16 @@ async function handleMessage(ctx: SocketCtx, msg: ConnectorMessage) {
           origin: ctx.origin,
           onConfirmed: (connector_id, owner_id, credential) => attachConnector(ctx, connector_id, owner_id, credential),
         });
+        if (distributed()) {
+          ctx.pairingRoute = (await cluster().bind(`pairing:${p.pairing_id}`, async payload => {
+            const result = payload as { type: string; connector_id: string; owner_id: string; credential: string };
+            if (ctx.pairingRoute) await cluster().unbind(`pairing:${p.pairing_id}`, ctx.pairingRoute);
+            st.pendingPairings.delete(p.pairing_id);
+            if (result.type === "confirmed") await attachConnector(ctx, result.connector_id, result.owner_id, result.credential);
+            else ctx.socket.close(4003, "pairing rejected");
+          }))!;
+          if (ctx.socket.readyState !== 1) { await onClose(ctx); return; }
+        }
         sendTo(ctx.socket, {
           type: "pending_confirmation",
           pairing_id: p.pairing_id,
@@ -207,18 +236,30 @@ async function handleMessage(ctx: SocketCtx, msg: ConnectorMessage) {
           return;
         }
         const d = await getDevice(device_id);
-        if (!d || !st.connectors.has(d.connector_id)) {
+        if (!d || !(await connectorOnline(d.connector_id))) {
           sendTo(ctx.socket, { type: "error", message: "signal: device is offline" });
           return;
         }
+        if (distributed() && !ctx.signalRoutes.has(msg.session_id)) {
+          const route = await cluster().bind(`signal:${msg.session_id}`, async payload => {
+            const reply = payload as { connector_id: string; data: unknown };
+            const device = await getDevice(device_id);
+            if (device?.connector_id === reply.connector_id && await canView(principal,device_id))
+              sendTo(ctx.socket, { type: "signal", session_id: msg.session_id, from: "device", device_id, data: reply.data });
+          }, { exclusive: true });
+          if (!route) { sendTo(ctx.socket, {type:"error",message:"signal: session_id belongs to another viewer"}); return; }
+          ctx.signalRoutes.set(msg.session_id,route);
+        }
         st.signalSessions.set(msg.session_id, { socket: ctx.socket, principal_id: principal, device_id });
         ctx.sessions.add(msg.session_id);
-        st.connectors.get(d.connector_id)!.socket.send(
-          JSON.stringify({ type: "signal", session_id: msg.session_id, from: "viewer", device_id, data: msg.data }),
-        );
+        await sendToConnector(d.connector_id, { type: "signal", session_id: msg.session_id, from: "viewer", device_id, data: msg.data });
         return;
       }
       if (msg.to === "viewer") {
+        if (distributed()) {
+          if (ctx.connector_id) await cluster().send(`signal:${msg.session_id}`, { connector_id: ctx.connector_id, data: msg.data });
+          return;
+        }
         const sess = st.signalSessions.get(msg.session_id);
         if (!sess || !ctx.connector_id) return;
         const d = await getDevice(sess.device_id);
@@ -232,17 +273,22 @@ async function handleMessage(ctx: SocketCtx, msg: ConnectorMessage) {
   }
 }
 
-function onClose(ctx: SocketCtx) {
+async function onClose(ctx: SocketCtx) {
   const st = S();
   if (ctx.connector_id) {
     const s = st.connectors.get(ctx.connector_id);
     if (s && s.socket === ctx.socket) {
       st.connectors.delete(ctx.connector_id);
-      void setConnectorDevicesOnline(ctx.connector_id, false).catch(() => {});
+      if (distributed()) {
+        if (ctx.connectorRoute) await cluster().unbind(`connector:${ctx.connector_id}`,ctx.connectorRoute);
+        await db().query(`update devices set online=false,updated_at=now() where connector_id=$1
+          and not exists(select 1 from ghost_routes where route_key=$2 and expires_at>now())`, [ctx.connector_id,`connector:${ctx.connector_id}`]);
+      } else await setConnectorDevicesOnline(ctx.connector_id, false);
       log("info", `connector ${ctx.connector_id} disconnected`);
     }
   }
   if (ctx.pairing_id) {
+    if (distributed() && ctx.pairingRoute) await cluster().unbind(`pairing:${ctx.pairing_id}`,ctx.pairingRoute);
     const p = st.pendingPairings.get(ctx.pairing_id);
     if (p && p.socket === ctx.socket) {
       st.pendingPairings.delete(ctx.pairing_id);
@@ -251,6 +297,7 @@ function onClose(ctx: SocketCtx) {
         .catch(() => {});
     }
   }
+  for (const [sid,token] of ctx.signalRoutes) await cluster().unbind(`signal:${sid}`,token);
   for (const sid of ctx.sessions) {
     const s = st.signalSessions.get(sid);
     if (s && s.socket === ctx.socket) st.signalSessions.delete(sid);
@@ -258,7 +305,7 @@ function onClose(ctx: SocketCtx) {
 }
 
 export function attachSocket(socket: WebSocket, req: IncomingMessage) {
-  const ctx: SocketCtx = { socket, origin: originOf(req), cookiePrincipal: null, sessions: new Set() };
+  const ctx: SocketCtx = { socket, origin: originOf(req), cookiePrincipal: null, sessions: new Set(), signalRoutes: new Map() };
   // Serialize message handling per socket so hello completes before publish, etc.
   let chain: Promise<unknown> = (async () => {
     await dbReady();
@@ -289,7 +336,7 @@ export function attachSocket(socket: WebSocket, req: IncomingMessage) {
         sendTo(socket, { type: "error", message: (e as Error).message ?? "internal error" });
       });
   });
-  socket.on("close", () => onClose(ctx));
+  socket.on("close", () => background(chain.then(() => onClose(ctx))));
   socket.on("error", () => {});
 }
 

@@ -408,7 +408,7 @@ export async function sendReport(
   const inbox = await ensureInbox();
   const report = await buildReport(principal_id, body, inbox.email);
   // Outward-facing action: global sliding-window limit (default 10 per hour).
-  if (!rateLimit(MAIL_RATE_KEY, maxPerHour(), 3_600_000))
+  if (!await rateLimit(MAIL_RATE_KEY, maxPerHour(), 3_600_000))
     throw new GhostError(429, `mail rate limit reached (${maxPerHour()} per hour)`, "rate_limited");
   let res;
   try {

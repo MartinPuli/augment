@@ -1,3 +1,5 @@
+For a complete Vercel deployment (HTTP, MCP, and device WebSockets), see [Vercel deployment](./vercel.md). The instructions below describe the standalone server option.
+
 # Deploying GHOST to Fly.io
 
 GHOST runs as a single Node process (`server.ts`). It serves the Next.js app, the coordinator API

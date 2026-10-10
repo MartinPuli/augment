@@ -1,3 +1,4 @@
+import { cluster, distributed, sharedRateLimit } from "./cluster";
 import type { Invocation } from "../contracts";
 import type { Db } from "./db";
 import type { GhostEvent } from "../contracts";
@@ -24,7 +25,7 @@ export interface PendingPairingSocket {
   socket: SocketLike;
   origin?: string;
   /** Called on confirm to turn the socket into a connector session. */
-  onConfirmed: (connector_id: string, owner_id: string, credential: string) => void;
+  onConfirmed: (connector_id: string, owner_id: string, credential: string) => void | Promise<void>;
 }
 
 export interface InvocationWaiter {
@@ -94,14 +95,16 @@ export function sendTo(socket: SocketLike, msg: unknown): boolean {
 }
 
 /** Send a CoordinatorMessage to a connected connector. Returns false if it is not connected. */
-export function sendToConnector(connector_id: string, msg: unknown): boolean {
+export async function sendToConnector(connector_id: string, msg: unknown): Promise<boolean> {
+  if (distributed()) return cluster().send(`connector:${connector_id}`, msg);
   const s = S().connectors.get(connector_id);
   if (!s) return false;
   return sendTo(s.socket, msg);
 }
 
 /** Simple sliding-window rate limit. Returns true if allowed. */
-export function rateLimit(key: string, max: number, windowMs: number): boolean {
+export async function rateLimit(key: string, max: number, windowMs: number): Promise<boolean> {
+  if (distributed()) return sharedRateLimit(key, max, windowMs);
   const st = S();
   const now = Date.now();
   const arr = (st.rate.get(key) ?? []).filter((t) => now - t < windowMs);
@@ -112,4 +115,10 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
   arr.push(now);
   st.rate.set(key, arr);
   return true;
+}
+
+export async function connectorOnline(connector_id: string): Promise<boolean> {
+  if (distributed()) return cluster().present(`connector:${connector_id}`);
+  const session = S().connectors.get(connector_id);
+  return !!session && !session.timedOut && session.socket.readyState === 1;
 }

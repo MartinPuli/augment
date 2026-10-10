@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { S } from "./state";
+import { attachDatabasePool } from "@vercel/functions";
 
 export interface QueryResult<T> {
   rows: T[];
@@ -29,6 +30,11 @@ export interface DbOptions {
 }
 
 const MIGRATIONS: string[] = [
+  `create table if not exists ghost_routes (route_key text primary key, instance_id text not null, session_token text not null, expires_at timestamptz not null)`,
+  `create table if not exists ghost_messages (message_id bigserial primary key, route_key text not null, instance_id text not null, session_token text not null, payload jsonb not null, expires_at timestamptz not null)`,
+  `create index if not exists ghost_messages_instance on ghost_messages(instance_id,message_id)`,
+  `create index if not exists ghost_messages_expiry on ghost_messages(expires_at)`,
+  `create table if not exists ghost_rate_limits (bucket text primary key, used integer not null, resets_at timestamptz not null)`,
   `create table if not exists principals (
     principal_id text primary key,
     display_name text not null,
@@ -203,7 +209,10 @@ function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> 
 }
 
 async function migrate(db: Db) {
-  for (const sql of MIGRATIONS) await db.query(sql);
+  await db.tx(async q => {
+    if (db.kind === "postgres") await q.query("select pg_advisory_xact_lock(hashtext(current_schema()), 724219)");
+    for (const sql of MIGRATIONS) await q.query(sql);
+  });
 }
 
 async function openPostgres(url: string, schema?: string): Promise<Db> {
@@ -217,15 +226,25 @@ async function openPostgres(url: string, schema?: string): Promise<Db> {
   const pool = new Pool({
     connectionString: altSchema ? url.replace(/-pooler(\.)/, "$1") : url,
     ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
-    max: 8,
+    max: process.env.VERCEL === "1" ? 3 : 8,
     // Keep connections warm: reconnecting to a remote Postgres (TLS handshake) costs ~1s.
-    idleTimeoutMillis: 300_000,
+    idleTimeoutMillis: process.env.VERCEL === "1" ? 5000 : 300_000,
     keepAlive: true,
     connectionTimeoutMillis: 15_000,
     ...(altSchema ? { options: `-c search_path=${schema}` } : {}),
   });
+  if (process.env.VERCEL === "1") attachDatabasePool(pool);
   pool.on("error", (e) => console.error("[ghost] pg pool error", e.message));
-  if (altSchema) await pool.query(`create schema if not exists ${schema}`);
+  if (altSchema) {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      await client.query("select pg_advisory_xact_lock(hashtext($1),724218)", [schema]);
+      await client.query(`create schema if not exists ${schema}`);
+      await client.query("commit");
+    } catch (error) { await client.query("rollback").catch(() => {}); throw error; }
+    finally { client.release(); }
+  }
   const db: Db = {
     kind: "postgres",
     async query(sql, params) {
@@ -305,6 +324,7 @@ export function openDb(opts: DbOptions = {}): Promise<Db> {
   const url = opts.databaseUrl ?? process.env.DATABASE_URL;
   const dataDir = opts.dataDir ?? process.env.GHOST_PGDATA ?? path.join(process.cwd(), ".ghost", "pgdata");
   const forceLocal = process.env.GHOST_DB === "pglite";
+  if (process.env.VERCEL === "1" && (!url || forceLocal)) throw new Error("Vercel requires persistent Postgres via DATABASE_URL");
   st.dbPromise = (async () => {
     let db: Db;
     if (url && !forceLocal) {
@@ -315,7 +335,7 @@ export function openDb(opts: DbOptions = {}): Promise<Db> {
         db = pgDb;
       } catch (e) {
         void pgDb?.close().catch(() => {});
-        if (process.env.GHOST_DB_FALLBACK === "0") throw e;
+        if (process.env.GHOST_DB_FALLBACK === "0" || process.env.VERCEL === "1") throw e;
         // Keep the open-source core usable offline / on flaky networks: fall back loudly to PGlite.
         console.error(
           `[ghost] WARNING: cannot reach DATABASE_URL (${(e as Error).message}). Falling back to embedded PGlite at ${dataDir}. ` +

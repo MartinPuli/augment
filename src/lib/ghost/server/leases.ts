@@ -638,7 +638,7 @@ export async function endLease(lease_id: string, state: Extract<LeaseState, "rel
     const d = await getDevice(did);
     if (d && !d.connector_id.startsWith("internal:")) byConnector.set(d.connector_id, [...(byConnector.get(d.connector_id) ?? []), did]);
   }
-  for (const [cid, dids] of byConnector) sendToConnector(cid, { type: "revoke", lease_id, device_ids: dids });
+  for (const [cid, dids] of byConnector) await sendToConnector(cid, { type: "revoke", lease_id, device_ids: dids });
   emit({ type: "lease.updated", lease: ended });
   log("info", `lease ${lease_id} ${state}: ${reason}`);
   return ended;

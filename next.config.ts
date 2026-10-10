@@ -17,10 +17,11 @@ const publicHost = (() => {
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  serverExternalPackages: ["agentmail", "@mastra/core", "@mastra/libsql", "@mastra/pg", "@mastra/observability", "libsql", "@libsql/client"],
   outputFileTracingIncludes: { "/*": ["./resources/hardware-skills/**/*"] },
   // Deploy the UI independently while the live device coordinator owns its sockets.
   async rewrites() {
-    const coordinator = process.env.GHOST_COORDINATOR_ORIGIN?.replace(/\/+$/, "");
+    const coordinator = process.env.VERCEL === "1" ? undefined : process.env.GHOST_COORDINATOR_ORIGIN?.replace(/\/+$/, "");
     return coordinator ? [
       { source: "/api/v1/:path*", destination: `${coordinator}/api/v1/:path*` },
       { source: "/mcp", destination: `${coordinator}/mcp` },

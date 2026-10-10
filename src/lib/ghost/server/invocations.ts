@@ -1,3 +1,4 @@
+import { distributed } from "./cluster";
 import type {
   CapabilitySpec,
   Device,
@@ -15,7 +16,7 @@ import { emit, log } from "./events";
 import { authorizeAndConsume } from "./leases";
 import { findCapability, requireDevice, setDeviceStatus } from "./registry";
 import { validateSchema } from "./schema";
-import { rateLimit, S, sendToConnector } from "./state";
+import { connectorOnline, rateLimit, S, sendToConnector } from "./state";
 import {
   bad,
   conflict,
@@ -298,7 +299,14 @@ async function waitTerminal(invocation_id: string, deadlineMs: number): Promise<
   const cur = await getInvocationRaw(invocation_id);
   if (cur && TERMINAL.includes(cur.state)) return cur;
   const remaining = Math.max(0, deadlineMs - Date.now());
-  const done = await waitFor(invocation_id, remaining);
+  let done: Invocation | null = null;
+  if (distributed()) {
+    while (Date.now() < deadlineMs) {
+      const current = await getInvocationRaw(invocation_id);
+      if (current && TERMINAL.includes(current.state)) { done = current; break; }
+      await new Promise(resolve => setTimeout(resolve, Math.min(250, Math.max(0, deadlineMs-Date.now()))));
+    }
+  } else { done = await waitFor(invocation_id, remaining); }
   if (done) return done;
   // Never claim success: no result before the deadline means we don't know what happened.
   const timedOut = await finalize(invocation_id, { state: "unknown", error: "no result before the deadline; the outcome is unknown" });
@@ -346,14 +354,14 @@ export async function invoke(visitor_id: string, req: InvokeRequest, opts: Invok
   const internalId = device.connector_id.startsWith("internal:") ? device.connector_id.slice("internal:".length) : null;
   const adapter = internalId ? internalAdapters.find((a) => a.id === internalId) : null;
   if (internalId && !adapter) throw conflict(`adapter ${internalId} is not loaded`);
-  if (!internalId && !S().connectors.has(device.connector_id))
+  if (!internalId && !(await connectorOnline(device.connector_id)))
     throw new GhostError(503, `${device.name} is offline (its connector is not connected)`, "offline");
 
   if (device.access_type === "public_observation" && device.owner_id !== visitor_id) {
-    if (!rateLimit(`pub:${visitor_id}:${device.device_id}`, PUBLIC_RATE_PER_MIN, 60_000))
+    if (!await rateLimit(`pub:${visitor_id}:${device.device_id}`, PUBLIC_RATE_PER_MIN, 60_000))
       throw tooMany(`rate limit: at most ${PUBLIC_RATE_PER_MIN} public observations per minute per device`);
   }
-  if (cap.limits?.rate_per_min && !rateLimit(`cap:${visitor_id}:${device.device_id}:${cap.capability_id}`, cap.limits.rate_per_min, 60_000))
+  if (cap.limits?.rate_per_min && !await rateLimit(`cap:${visitor_id}:${device.device_id}:${cap.capability_id}`, cap.limits.rate_per_min, 60_000))
     throw tooMany(`rate limit: ${cap.capability_id} allows ${cap.limits.rate_per_min} calls per minute`);
 
   const invocation_id = id("inv");
@@ -399,7 +407,7 @@ export async function invoke(visitor_id: string, req: InvokeRequest, opts: Invok
     void runAdapter(adapter, device, cap, args, inv0, visitor_id, deadline);
   } else {
     const origin = connectorOrigin(device.connector_id, opts.origin);
-    const sent = sendToConnector(device.connector_id, {
+    const sent = await sendToConnector(device.connector_id, {
       type: "invoke",
       invocation_id,
       device_id: device.device_id,
@@ -551,6 +559,6 @@ export async function cancelInvocation(invocation_id: string): Promise<"cancelle
   const ac = S().aborts.get(invocation_id);
   if (ac) ac.abort();
   const device = await requireDevice(inv.device_id).catch(() => null);
-  if (device && !device.connector_id.startsWith("internal:")) sendToConnector(device.connector_id, { type: "cancel", invocation_id });
+  if (device && !device.connector_id.startsWith("internal:")) await sendToConnector(device.connector_id, { type: "cancel", invocation_id });
   return "unsupported";
 }
