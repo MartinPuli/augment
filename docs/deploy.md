@@ -63,9 +63,9 @@ Without `DATABASE_URL`, both live on the `ghost_data` volume.
 ## 3. Deploy
 
 ```bash
-fly deploy
+fly deploy --ha=false
 # Optional Interfere build integration (needs both keys; the secret one is a BuildKit secret):
-fly deploy --build-arg INTERFERE_PUBLIC_KEY=interfere_public_us_... \
+fly deploy --ha=false --build-arg INTERFERE_PUBLIC_KEY=interfere_public_us_... \
            --build-secret INTERFERE_API_KEY=interfere_secret_us_...
 
 fly status          # machine started, health check passing
@@ -73,7 +73,7 @@ fly logs            # "> GHOST ready on http://localhost:3000 (production)"
 curl https://ghost-<you>.fly.dev/api/v1/health
 ```
 
-Keep exactly one machine:
+Use `--ha=false` on the first deployment so Fly does not create a spare coordinator. Keep exactly one machine:
 
 ```bash
 fly scale count 1

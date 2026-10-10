@@ -5,6 +5,11 @@
 *.pem
 .ghost/
 .mastra/
+.vercel/
+# Local application demo notes and licensed font sources are not deployment assets.
+docs/alpha-dot-demo.md
+scripts/alpha-mcp-demo.ts
+tiempos-font-family/
 
 # Rebuilt inside the image
 node_modules/
